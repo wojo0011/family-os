@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Family OS moon-base space backdrop</title>
+  <desc id="desc">A lightweight static space backdrop with stars, distant planets, lunar horizon and a rover.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#070817"/>
+      <stop offset="0.55" stop-color="#111037"/>
+      <stop offset="1" stop-color="#17123d"/>
+    </linearGradient>
+    <radialGradient id="planet" cx="32%" cy="28%" r="72%">
+      <stop offset="0" stop-color="#ece9ff"/>
+      <stop offset="0.18" stop-color="#a998ff"/>
+      <stop offset="0.58" stop-color="#6552c8"/>
+      <stop offset="1" stop-color="#241943"/>
+    </radialGradient>
+    <linearGradient id="moon" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#aeb8cf"/>
+      <stop offset="0.45" stop-color="#7d879f"/>
+      <stop offset="1" stop-color="#454d66"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="14"/></filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <g fill="#fff" opacity=".78">
+    <circle cx="75" cy="90" r="1.7"/><circle cx="210" cy="150" r="1"/><circle cx="345" cy="72" r="1.4"/><circle cx="480" cy="220" r="1"/>
+    <circle cx="620" cy="118" r="1.8"/><circle cx="790" cy="190" r="1.1"/><circle cx="945" cy="82" r="1.6"/><circle cx="1090" cy="205" r="1"/>
+    <circle cx="1265" cy="105" r="1.8"/><circle cx="1445" cy="235" r="1.2"/><circle cx="1530" cy="82" r="1.4"/><circle cx="135" cy="345" r="1"/>
+    <circle cx="320" cy="390" r="1.7"/><circle cx="565" cy="330" r="1"/><circle cx="735" cy="420" r="1.5"/><circle cx="920" cy="350" r="1.1"/>
+    <circle cx="1180" cy="415" r="1.7"/><circle cx="1390" cy="365" r="1"/><circle cx="1510" cy="480" r="1.5"/>
+  </g>
+  <ellipse cx="1315" cy="220" rx="175" ry="175" fill="#8874ff" opacity=".18" filter="url(#glow)"/>
+  <circle cx="1315" cy="220" r="112" fill="url(#planet)" opacity=".86"/>
+  <g transform="translate(1015 150) rotate(-13)">
+    <ellipse cx="0" cy="0" rx="105" ry="26" fill="none" stroke="#ffd59f" stroke-width="7" opacity=".44"/>
+    <circle cx="0" cy="0" r="58" fill="#c98572"/>
+    <circle cx="-17" cy="-18" r="22" fill="#f3bd80" opacity=".7"/>
+  </g>
+  <path d="M0 760 C180 716 315 735 480 772 C650 810 820 740 1000 750 C1190 760 1370 708 1600 744 L1600 1000 L0 1000 Z" fill="url(#moon)"/>
+  <path d="M0 790 C220 748 430 808 620 810 C845 812 1020 760 1220 785 C1380 803 1490 778 1600 765" fill="none" stroke="#d9e0f0" stroke-opacity=".18" stroke-width="5"/>
+  <g fill="#394158" opacity=".48">
+    <ellipse cx="190" cy="850" rx="68" ry="18"/><ellipse cx="530" cy="902" rx="45" ry="13"/><ellipse cx="920" cy="842" rx="58" ry="17"/><ellipse cx="1320" cy="918" rx="72" ry="21"/>
+  </g>
+  <g transform="translate(1365 815)">
+    <ellipse cx="10" cy="88" rx="118" ry="15" fill="#202637" opacity=".4"/>
+    <g fill="#222a3c" stroke="#b4bfd7" stroke-width="5">
+      <circle cx="-60" cy="70" r="29"/><circle cx="52" cy="70" r="29"/>
+    </g>
+    <rect x="-78" y="18" width="148" height="55" rx="18" fill="#d3d9e8" stroke="#626f89" stroke-width="5"/>
+    <rect x="-54" y="30" width="88" height="20" rx="8" fill="#7788b4"/>
+    <path d="M55 20 L85 -26" stroke="#aebad4" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="87" cy="-30" r="7" fill="#71dcff"/>
+    <g transform="translate(-10 -21)">
+      <rect x="-19" y="28" width="38" height="47" rx="14" fill="#eceff8"/>
+      <circle cx="0" cy="10" r="28" fill="#e9edf7" stroke="#8a96af" stroke-width="5"/>
+      <path d="M-17 5 Q0 -8 18 4 L14 20 Q0 29 -15 18 Z" fill="#24314a"/>
+    </g>
+  </g>
+</svg>
