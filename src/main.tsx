@@ -4,6 +4,7 @@ import App from './App';
 import { installWeatherIconCompatibility } from './weatherIconCompatibility';
 import './styles.css';
 import './enhancements.css';
+import './weather.css';
 
 installWeatherIconCompatibility();
 
