@@ -5,7 +5,7 @@ import { installWeatherIconCompatibility } from './weatherIconCompatibility';
 import { installSpaceThemeDefault } from './spaceThemeDefault';
 import { installThemeFavicon } from './themeFavicon';
 import { installSpaceExperience } from './spaceExperience';
-import { installSpacePlanetExperience } from './spacePlanetExperience';
+import { installSpacePanelToggle } from './spacePanelToggle';
 import './styles.css';
 import './enhancements.css';
 import './weather.css';
@@ -17,15 +17,7 @@ import './space-planets.css';
 installWeatherIconCompatibility();
 installSpaceThemeDefault();
 installThemeFavicon();
-
-// The lens picker is React state, while the Three.js backdrop is deliberately
-// decoupled from application data. Removing the small planet canvas after a lens
-// click lets its observer rebuild with the Child/standard texture set.
-document.addEventListener('click', event => {
-  const target = event.target;
-  if (!(target instanceof Element) || !target.closest('.lens-picker button')) return;
-  requestAnimationFrame(() => document.querySelector('.space-planet-canvas')?.remove());
-});
+installSpacePanelToggle();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Family OS root element is missing.');
@@ -38,21 +30,13 @@ createRoot(rootElement).render(
 
 function installHeavySpaceEnhancements() {
   try {
+    // One WebGL renderer only. Earth/Mars will be merged into this scene rather
+    // than starting a second renderer/canvas, which was exhausting GPU resources
+    // and making some browsers unresponsive.
     installSpaceExperience();
   } catch (error) {
     console.error('Family OS moon-base renderer could not start.', error);
   }
-
-  // Let the base moon scene establish its canvas before loading the additional
-  // textured Earth/Mars renderer. This prevents two WebGL contexts from
-  // competing during the first meaningful paint.
-  window.setTimeout(() => {
-    try {
-      installSpacePlanetExperience();
-    } catch (error) {
-      console.error('Family OS planet renderer could not start.', error);
-    }
-  }, 420);
 }
 
 function scheduleHeavySpaceEnhancements() {
@@ -68,8 +52,8 @@ function scheduleHeavySpaceEnhancements() {
 }
 
 // Two animation frames guarantee that the React shell has painted before the
-// loader is dismissed. Weather, textures and Three.js are enhancements and are
-// intentionally not part of the loader's critical path.
+// loader is dismissed. Weather and Three.js are enhancements and are not part
+// of the loader's critical path.
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {
     window.dispatchEvent(new CustomEvent('family-os:app-ready'));
