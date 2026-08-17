@@ -1,0 +1,306 @@
+/* Space theme ambience — intentionally scoped to Today only.
+   Other Family OS pages keep the Space palette without the decorative scene. */
+
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 30px;
+}
+
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) > .stack {
+  position: relative;
+  z-index: 3;
+}
+
+/* Deep layered star field. */
+:root[data-theme="space"] .content:has(> .stack > .hero-grid)::before {
+  content: "";
+  position: absolute;
+  inset: -120px;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .9;
+  background:
+    radial-gradient(circle at 8% 12%, rgba(255,255,255,.95) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 27% 34%, rgba(157,205,255,.9) 0 1.2px, transparent 2px),
+    radial-gradient(circle at 51% 16%, rgba(255,255,255,.8) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 78% 26%, rgba(196,173,255,.95) 0 1.3px, transparent 2.1px),
+    radial-gradient(circle at 92% 68%, rgba(255,255,255,.88) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 17% 78%, rgba(119,219,255,.8) 0 1.1px, transparent 1.9px),
+    radial-gradient(circle at 63% 72%, rgba(255,255,255,.82) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 38% 92%, rgba(187,164,255,.9) 0 1.2px, transparent 2px),
+    radial-gradient(circle at 84% 88%, rgba(255,255,255,.9) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 70% 48%, rgba(123,220,255,.45), transparent 18%),
+    radial-gradient(circle at 18% 56%, rgba(154,116,255,.26), transparent 23%);
+  background-size:
+    170px 170px,
+    230px 230px,
+    310px 310px,
+    380px 380px,
+    260px 260px,
+    340px 340px,
+    450px 450px,
+    520px 520px,
+    610px 610px,
+    auto,
+    auto;
+  animation: family-space-stars 70s linear infinite, family-space-twinkle 7s ease-in-out infinite alternate;
+}
+
+/* Large distant violet planet behind the upper-right cards. */
+:root[data-theme="space"] .content:has(> .stack > .hero-grid)::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  width: 310px;
+  height: 310px;
+  right: -125px;
+  top: 95px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,.35), transparent 8%),
+    radial-gradient(circle at 62% 64%, rgba(58,34,117,.8), transparent 35%),
+    linear-gradient(135deg, #9088ff 0%, #6852ca 38%, #372867 68%, #16122e 100%);
+  box-shadow:
+    0 0 35px rgba(157,140,255,.34),
+    0 0 110px rgba(120,91,255,.22),
+    inset -44px -35px 68px rgba(5,7,24,.58);
+  animation: family-space-planet-float 13s ease-in-out infinite;
+}
+
+/* Turn Today cards into glass windows over the sky without sacrificing contrast. */
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .hero,
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .weather,
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .panel {
+  background:
+    linear-gradient(145deg, rgba(25,22,61,.9), rgba(13,14,39,.84));
+  border-color: rgba(174,164,255,.16);
+  box-shadow:
+    0 24px 70px rgba(0,0,0,.34),
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 0 0 1px rgba(113,220,255,.018);
+}
+
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .hero-grid,
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .two-col {
+  position: relative;
+  z-index: 2;
+}
+
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .hero-grid > *,
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .two-col > * {
+  position: relative;
+  z-index: 3;
+}
+
+/* Ringed planet crossing the space between hero cards. */
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .hero-grid::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  width: 108px;
+  height: 108px;
+  left: 58%;
+  top: -32px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 29%, rgba(255,255,255,.55), transparent 8%),
+    linear-gradient(145deg, #f3b66a 0%, #c6796c 45%, #6a3d70 75%, #241733 100%);
+  box-shadow:
+    0 0 28px rgba(244,173,102,.24),
+    inset -18px -15px 28px rgba(20,10,34,.5);
+  animation: family-space-ringed-planet 10s ease-in-out infinite;
+}
+
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .hero-grid::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  width: 166px;
+  height: 48px;
+  left: calc(58% - 29px);
+  top: -3px;
+  border: 3px solid rgba(255,210,148,.48);
+  border-left-color: rgba(255,210,148,.2);
+  border-right-color: rgba(255,210,148,.7);
+  border-radius: 50%;
+  transform: rotate(-15deg);
+  box-shadow: 0 0 18px rgba(255,197,123,.16);
+  animation: family-space-ring 10s ease-in-out infinite;
+}
+
+/* Small blue world near the lower left, still behind the panels. */
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .two-col::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  width: 82px;
+  height: 82px;
+  left: -40px;
+  bottom: -32px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,.6), transparent 7%),
+    radial-gradient(circle at 64% 55%, rgba(72,238,217,.65), transparent 16%),
+    linear-gradient(145deg, #4cc8ff, #3153ad 54%, #17183d 100%);
+  box-shadow:
+    0 0 22px rgba(73,194,255,.26),
+    0 0 70px rgba(80,114,255,.18),
+    inset -15px -15px 28px rgba(3,10,42,.52);
+  animation: family-space-small-planet 9s ease-in-out infinite;
+}
+
+/* A tiny moon / satellite to add depth. */
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .two-col::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  width: 24px;
+  height: 24px;
+  right: 18%;
+  top: -30px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, #fff, #b8c2e2 35%, #6f7698 70%, #2d304a);
+  box-shadow: 0 0 18px rgba(211,220,255,.28);
+  animation: family-space-moon 8s ease-in-out infinite;
+}
+
+/* Occasional shooting star behind the cards. */
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) > .stack::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  top: 34px;
+  left: 18%;
+  width: 120px;
+  height: 1px;
+  opacity: 0;
+  transform: rotate(-24deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), #fff);
+  box-shadow: 75px 0 10px rgba(120,211,255,.38);
+  animation: family-space-shooting-star 13s ease-in-out infinite;
+}
+
+/* The Night Sky panel gets a slight celestial halo in Space mode. */
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .sky {
+  position: relative;
+  overflow: hidden;
+}
+
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .sky::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  inset: auto -60px -110px auto;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(110,205,255,.16), rgba(127,96,255,.07) 42%, transparent 68%);
+}
+
+@keyframes family-space-stars {
+  from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0; }
+  to { background-position: 90px 55px, -75px 60px, 68px -42px, -55px -36px, 44px 68px, -36px 52px, 72px -58px, -42px -64px, 38px 46px, 0 0, 0 0; }
+}
+
+@keyframes family-space-twinkle {
+  0% { opacity: .72; filter: brightness(.95); }
+  50% { opacity: .95; filter: brightness(1.16); }
+  100% { opacity: .8; filter: brightness(1.02); }
+}
+
+@keyframes family-space-planet-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-4deg); }
+  50% { transform: translate3d(-12px, 14px, 0) rotate(2deg); }
+}
+
+@keyframes family-space-ringed-planet {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-3deg); }
+  50% { transform: translate3d(8px, 8px, 0) rotate(3deg); }
+}
+
+@keyframes family-space-ring {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-15deg); }
+  50% { transform: translate3d(8px, 8px, 0) rotate(-12deg); }
+}
+
+@keyframes family-space-small-planet {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(8px, -8px, 0); }
+}
+
+@keyframes family-space-moon {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(13px, 7px, 0); }
+}
+
+@keyframes family-space-shooting-star {
+  0%, 74% { opacity: 0; transform: translate3d(-120px, -70px, 0) rotate(-24deg); }
+  77% { opacity: .9; }
+  84% { opacity: 0; transform: translate3d(650px, 290px, 0) rotate(-24deg); }
+  100% { opacity: 0; }
+}
+
+@media (max-width: 900px) {
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid)::after {
+    width: 240px;
+    height: 240px;
+    right: -130px;
+  }
+
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) .hero-grid::before,
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) .hero-grid::after {
+    opacity: .65;
+  }
+}
+
+@media (max-width: 720px) {
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) {
+    border-radius: 18px;
+  }
+
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid)::after {
+    width: 190px;
+    height: 190px;
+    right: -110px;
+    top: 145px;
+    opacity: .72;
+  }
+
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) .hero-grid::before {
+    width: 74px;
+    height: 74px;
+    left: 72%;
+    top: -18px;
+  }
+
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) .hero-grid::after {
+    width: 112px;
+    height: 34px;
+    left: calc(72% - 19px);
+    top: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid)::before,
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid)::after,
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) .hero-grid::before,
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) .hero-grid::after,
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) .two-col::before,
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) .two-col::after,
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) > .stack::before {
+    animation: none;
+  }
+
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) > .stack::before {
+    display: none;
+  }
+}
