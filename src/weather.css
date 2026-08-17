@@ -1,0 +1,119 @@
+/* Weather presentation overrides.
+   Meteocons supplies the internal SVG animation; these transforms make the
+   motion unmistakable and keep the primary weather artwork visually dominant. */
+
+.weather-art {
+  display: block;
+  flex: 0 0 auto;
+  object-fit: contain;
+  transform-origin: 50% 55%;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, .22));
+  animation: family-weather-float 3.4s ease-in-out infinite;
+  will-change: transform;
+}
+
+.weather-sm {
+  width: 30px;
+  height: 30px;
+}
+
+.weather-md {
+  width: 52px;
+  height: 52px;
+}
+
+.weather-lg {
+  width: 140px;
+  height: 140px;
+}
+
+.weather > .weather-lg {
+  margin: -24px -8px -18px 0;
+  align-self: center;
+}
+
+.weather-chip .weather-sm {
+  width: 30px;
+  height: 30px;
+}
+
+.tile-weather {
+  min-height: 52px;
+  gap: 2px;
+}
+
+.tile-weather .weather-md {
+  margin: -9px 0 -9px -7px;
+}
+
+.timeline em .weather-sm {
+  width: 24px;
+  height: 24px;
+}
+
+/* Condition-specific motion sits on top of Meteocons' internal animation so
+   clouds/rain/snow remain visibly alive even at a glance. */
+.weather-art[src*="/clear-day.svg"] {
+  animation: family-weather-sun 5s ease-in-out infinite;
+}
+
+.weather-art[src*="/partly-cloudy-day.svg"],
+.weather-art[src*="/overcast.svg"],
+.weather-art[src*="/fog-day.svg"] {
+  animation: family-weather-cloud 3.2s ease-in-out infinite;
+}
+
+.weather-art[src*="/rain.svg"],
+.weather-art[src*="/thunderstorms-day-rain.svg"] {
+  animation: family-weather-rain 1.8s ease-in-out infinite;
+}
+
+.weather-art[src*="/snow.svg"] {
+  animation: family-weather-snow 2.6s ease-in-out infinite;
+}
+
+@keyframes family-weather-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -5px, 0); }
+}
+
+@keyframes family-weather-sun {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-1deg) scale(1); }
+  50% { transform: translate3d(0, -4px, 0) rotate(2deg) scale(1.045); }
+}
+
+@keyframes family-weather-cloud {
+  0%, 100% { transform: translate3d(-3px, 0, 0); }
+  50% { transform: translate3d(4px, -3px, 0); }
+}
+
+@keyframes family-weather-rain {
+  0%, 100% { transform: translate3d(0, -2px, 0); }
+  50% { transform: translate3d(0, 3px, 0); }
+}
+
+@keyframes family-weather-snow {
+  0%, 100% { transform: translate3d(-2px, -2px, 0) rotate(-1deg); }
+  50% { transform: translate3d(3px, 3px, 0) rotate(1deg); }
+}
+
+@media (max-width: 900px) {
+  .weather-lg {
+    width: 122px;
+    height: 122px;
+  }
+}
+
+@media (max-width: 720px) {
+  .weather-lg,
+  .weather > .weather-lg {
+    width: 112px;
+    height: 112px;
+    margin: -14px -4px -10px 0;
+  }
+
+  .tile-weather .weather-md {
+    width: 48px;
+    height: 48px;
+  }
+}
