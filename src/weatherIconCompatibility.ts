@@ -8,6 +8,10 @@ export function normalizeWeatherIconUrl(value: string) {
 
   return value
     .replace(METEOCONS_LEGACY_BASE, METEOCONS_CURRENT_BASE)
+    // Family OS explicitly uses animated weather artwork. The app previously
+    // selected svg-static for reduced-motion preferences, which made the
+    // weather look broken/static to users expecting animated weather.
+    .replace('/svg-static/', '/svg/')
     .replace('/overcast-day.svg', '/overcast.svg')
     .replace('/thunderstorms-day.svg', '/thunderstorms-day-rain.svg');
 }
