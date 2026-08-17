@@ -1,14 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="family-os-loading">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#07111f" />
+    <meta name="theme-color" content="#08091a" />
     <meta name="description" content="Family OS — a private, personalized family calendar and household timeline." />
     <link id="family-os-favicon" rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
+    <link rel="stylesheet" href="%BASE_URL%family-loader.css" />
     <title>Family OS</title>
   </head>
   <body>
+    <div id="family-os-loader" class="family-os-loader" role="status" aria-live="polite" aria-label="Loading Family OS">
+      <div class="family-os-loader__inner">
+        <div class="family-os-loader__visual" aria-hidden="true">
+          <div class="family-os-loader__orbit"><span class="family-os-loader__planet"></span></div>
+          <div class="family-os-loader__orbit orbit-2"><span class="family-os-loader__planet"></span></div>
+          <div class="family-os-loader__mark">M</div>
+          <div class="family-os-loader__moon"></div>
+        </div>
+        <div class="family-os-loader__eyebrow">Family OS · Moon-Base</div>
+        <div class="family-os-loader__title">Launching Family Command Center</div>
+        <div class="family-os-loader__status-row">
+          <span id="family-os-loader-status">Starting Family OS</span>
+          <span id="family-os-loader-percent" class="family-os-loader__percent">4%</span>
+        </div>
+        <div class="family-os-loader__track" aria-hidden="true">
+          <span id="family-os-loader-progress" class="family-os-loader__progress"></span>
+        </div>
+      </div>
+    </div>
+    <script src="%BASE_URL%family-loader.js"></script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
