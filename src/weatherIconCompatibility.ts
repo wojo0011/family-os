@@ -1,6 +1,8 @@
 const METEOCONS_LEGACY_BASE = 'https://cdn.meteocons.com/0.1.0/';
 const METEOCONS_CURRENT_BASE = 'https://cdn.meteocons.com/latest/';
 
+let compatibilityInstalled = false;
+
 export function normalizeWeatherIconUrl(value: string) {
   if (!value.includes('cdn.meteocons.com/')) return value;
 
@@ -11,12 +13,13 @@ export function normalizeWeatherIconUrl(value: string) {
 }
 
 export function installWeatherIconCompatibility() {
-  if (typeof window === 'undefined' || typeof HTMLImageElement === 'undefined') return;
+  if (
+    compatibilityInstalled
+    || typeof window === 'undefined'
+    || typeof HTMLImageElement === 'undefined'
+  ) return;
 
-  const marker = '__familyOsMeteoconsCompatibilityInstalled';
-  const markedWindow = window as Window & Record<string, unknown>;
-  if (markedWindow[marker]) return;
-  markedWindow[marker] = true;
+  compatibilityInstalled = true;
 
   const imagePrototype = HTMLImageElement.prototype;
   const srcDescriptor = Object.getOwnPropertyDescriptor(imagePrototype, 'src');
@@ -31,8 +34,14 @@ export function installWeatherIconCompatibility() {
   }
 
   const originalSetAttribute = imagePrototype.setAttribute;
-  imagePrototype.setAttribute = function setAttribute(this: HTMLImageElement, name: string, value: string) {
-    const nextValue = name.toLowerCase() === 'src' ? normalizeWeatherIconUrl(value) : value;
+  imagePrototype.setAttribute = function setAttribute(
+    this: HTMLImageElement,
+    name: string,
+    value: string,
+  ) {
+    const nextValue = name.toLowerCase() === 'src'
+      ? normalizeWeatherIconUrl(value)
+      : value;
     return originalSetAttribute.call(this, name, nextValue);
   };
 }
