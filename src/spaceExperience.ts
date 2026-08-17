@@ -246,6 +246,12 @@ function addAstronaut(
     astronaut.add(boot);
   }
 
+  // A cool fill attached to the driver keeps the white suit and visor readable
+  // against the darker rover without lighting the whole lunar landscape.
+  const astronautFill = new THREE.PointLight(0xb9ddff, 3.1, 3.4, 2);
+  astronautFill.position.set(-0.16, 1.72, 0.72);
+  astronaut.add(astronautFill);
+
   rover.add(astronaut);
 }
 
@@ -260,9 +266,9 @@ function addRover(THREE: ThreeModule, scene: ThreeScene): RoverModel {
   const treadMaterial = new THREE.MeshStandardMaterial({ color: 0x293244, roughness: 0.9, metalness: 0.1 });
   const hubMaterial = new THREE.MeshStandardMaterial({ color: 0x9aa6b9, roughness: 0.38, metalness: 0.7 });
   const glassMaterial = new THREE.MeshPhysicalMaterial({ color: 0x4e719f, roughness: 0.12, metalness: 0.32, transparent: true, opacity: 0.82 });
-  const suitMaterial = new THREE.MeshStandardMaterial({ color: 0xf2f4f8, roughness: 0.56, metalness: 0.04 });
-  const jointMaterial = new THREE.MeshStandardMaterial({ color: 0xb5c1d2, roughness: 0.5, metalness: 0.22 });
-  const visorMaterial = new THREE.MeshPhysicalMaterial({ color: 0xc77b35, roughness: 0.11, metalness: 0.76, clearcoat: 1, clearcoatRoughness: 0.12 });
+  const suitMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.48, metalness: 0.03, emissive: 0x11182a, emissiveIntensity: 0.18 });
+  const jointMaterial = new THREE.MeshStandardMaterial({ color: 0xc7d2e2, roughness: 0.46, metalness: 0.2 });
+  const visorMaterial = new THREE.MeshPhysicalMaterial({ color: 0xd58a3c, roughness: 0.09, metalness: 0.78, clearcoat: 1, clearcoatRoughness: 0.1 });
 
   const lowerFrame = new THREE.Mesh(new THREE.BoxGeometry(2.95, 0.18, 0.82), frameMaterial);
   lowerFrame.position.y = -0.02;
@@ -387,7 +393,9 @@ async function createThreeLayer(host: HTMLElement, layer: HTMLElement, token: nu
   scene.fog = new THREE.FogExp2(0x08091a, 0.022);
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 140);
   camera.position.set(0, 0.8, 11.8);
-  camera.lookAt(0, -1.0, -3.8);
+  // Aim the optical centre above the dashboard content so the moon surface and
+  // rover project into the lower viewport band rather than behind Night Sky.
+  camera.lookAt(0, 0.35, -3.8);
 
   let renderer: InstanceType<ThreeModule['WebGLRenderer']>;
   try {
@@ -608,7 +616,7 @@ async function createThreeLayer(host: HTMLElement, layer: HTMLElement, token: nu
     pointer.y += (targetPointer.y - pointer.y) * 0.025;
     camera.position.x = pointer.x * 0.34;
     camera.position.y = 0.8 - pointer.y * 0.14;
-    camera.lookAt(pointer.x * 0.14, -1.0 - pointer.y * 0.05, -3.8);
+    camera.lookAt(pointer.x * 0.14, 0.35 - pointer.y * 0.05, -3.8);
 
     stars.rotation.y = elapsed * 0.0035;
     stars.rotation.x = Math.sin(elapsed * 0.08) * 0.015;
