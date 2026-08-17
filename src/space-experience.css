@@ -1,0 +1,137 @@
+/* Adaptive Family Moon-Base renderer.
+   The content cards stay readable and centered while the scene owns the full Today viewport. */
+
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) {
+  max-width: none;
+  width: 100%;
+  min-height: calc(100vh - 68px);
+  margin: 0;
+  border-radius: 0;
+  padding-bottom: 190px;
+}
+
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) > .stack {
+  width: min(1480px, 100%);
+  margin-inline: auto;
+  position: relative;
+  z-index: 4;
+}
+
+.space-experience-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.space-experience-image {
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: cover;
+  opacity: .94;
+}
+
+.space-experience-three {
+  background:
+    radial-gradient(circle at 72% 15%, rgba(119, 91, 255, .14), transparent 27%),
+    radial-gradient(circle at 20% 45%, rgba(74, 193, 255, .07), transparent 30%),
+    linear-gradient(180deg, #070817 0%, #0b0b24 50%, #111035 100%);
+}
+
+.space-experience-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* The adaptive renderer replaces the older CSS-only planets/starfield.
+   Keep the existing glass-card rules from space-today.css. */
+:root[data-theme="space"][data-space-active] .content:has(> .stack > .hero-grid)::before,
+:root[data-theme="space"][data-space-active] .content:has(> .stack > .hero-grid)::after,
+:root[data-theme="space"][data-space-active] .content:has(> .stack > .hero-grid) .hero-grid::before,
+:root[data-theme="space"][data-space-active] .content:has(> .stack > .hero-grid) .hero-grid::after,
+:root[data-theme="space"][data-space-active] .content:has(> .stack > .hero-grid) .two-col::before,
+:root[data-theme="space"][data-space-active] .content:has(> .stack > .hero-grid) .two-col::after,
+:root[data-theme="space"][data-space-active] .content:has(> .stack > .hero-grid) > .stack::before {
+  display: none;
+}
+
+/* The SVG artwork has generous transparent breathing room. Scale the hero
+   condition art independently so it reads as a major command-center instrument. */
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .weather > .weather-lg {
+  width: 188px;
+  height: 188px;
+  scale: 1.38;
+  margin: -30px 4px -24px 0;
+}
+
+:root[data-theme="space"] .content:has(> .stack > .hero-grid) .weather {
+  overflow: hidden;
+  min-height: 200px;
+}
+
+.space-renderer-settings {
+  gap: 12px;
+}
+
+.space-renderer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.settings .space-renderer-grid label {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255,255,255,.025);
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.settings .space-renderer-grid select {
+  width: 100%;
+}
+
+.space-renderer-status {
+  color: var(--accent2);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1050px) {
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) {
+    padding-bottom: 165px;
+  }
+}
+
+@media (max-width: 720px) {
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) {
+    min-height: calc(100vh - 60px);
+    padding: 14px 14px 145px;
+  }
+
+  :root[data-theme="space"] .content:has(> .stack > .hero-grid) .weather > .weather-lg {
+    width: 150px;
+    height: 150px;
+    scale: 1.32;
+    margin: -22px -2px -18px 0;
+  }
+
+  .space-renderer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-experience-three {
+    display: none;
+  }
+}
