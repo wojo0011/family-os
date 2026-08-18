@@ -15,6 +15,12 @@ try {
   page.on('pageerror', error => errors.push(String(error)));
   page.on('console', message => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
 
+  const clickNow = selector => page.evaluate(value => {
+    const element = document.querySelector(value);
+    if (!(element instanceof HTMLElement)) throw new Error(`Element not found for click: ${value}`);
+    element.click();
+  }, selector);
+
   const url = new URL(siteUrl);
   url.searchParams.set('calendar-smoke', Date.now().toString());
   await page.goto(url.toString(), { waitUntil: 'networkidle2', timeout: 60_000 });
@@ -27,38 +33,36 @@ try {
   });
 
   await page.waitForSelector('.calendar-planner-host .calendar-planner-shell', { timeout: 15_000 });
-  await page.waitForSelector('[data-planner-view="week"]');
-  await page.click('[data-planner-view="week"]');
+  await clickNow('[data-planner-view="week"]');
   await page.waitForFunction(() => document.querySelectorAll('.planner-week-grid .planner-day').length === 7, { timeout: 5_000 });
-  await page.click('[data-planner-view="month"]');
+  await clickNow('[data-planner-view="month"]');
   await page.waitForFunction(() => document.querySelectorAll('.planner-month-grid .planner-day').length >= 28, { timeout: 5_000 });
 
-  const search = '[data-planner-search]';
-  await page.click(search);
-  await page.type(search, 'Family');
+  await page.evaluate(() => {
+    const input = document.querySelector('[data-planner-search]');
+    if (!(input instanceof HTMLInputElement)) throw new Error('Calendar search input not found.');
+    input.value = 'Family';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
   await page.waitForFunction(() => document.querySelector('[data-planner-search]')?.value === 'Family', { timeout: 5_000 });
   await page.select('[data-planner-filter="person"]', 'family');
-  await page.click('[data-planner-clear]');
+  await clickNow('[data-planner-clear]');
   await page.waitForFunction(() => document.querySelector('[data-planner-search]')?.value === '', { timeout: 5_000 });
 
   // Click a day tile background and verify Event capture opens with that date prefilled.
   const dayDate = await page.$eval('.planner-month-grid .planner-day:not(.is-outside)', node => node.getAttribute('data-planner-day'));
   if (!dayDate) throw new Error('Planner day did not expose a date.');
-  await page.evaluate(() => {
-    const day = document.querySelector('.planner-month-grid .planner-day:not(.is-outside)');
-    if (!(day instanceof HTMLElement)) throw new Error('Planner day not found.');
-    day.click();
-  });
+  await clickNow('.planner-month-grid .planner-day:not(.is-outside)');
   await page.waitForSelector('.capture-pro form[data-capture-form-kind="Event"]', { timeout: 10_000 });
   const prefilledDate = await page.$eval('.capture-pro input[name="date"]', input => input.value);
   if (prefilledDate !== dayDate) throw new Error(`Day click did not prefill selected date: expected ${dayDate}, got ${prefilledDate}`);
-  await page.click('.capture-pro [data-capture-close]');
-  await page.waitForSelector('.capture-pro', { hidden: true, timeout: 10_000 }).catch(() => undefined);
+  await clickNow('.capture-pro [data-capture-close]');
+  await page.waitForFunction(() => !document.querySelector('.capture-pro'), { timeout: 10_000 });
 
   // Click a visible event and verify the detail/edit form opens.
   await page.waitForSelector('.calendar-planner-host .planner-event', { timeout: 10_000 });
   const eventText = await page.$eval('.calendar-planner-host .planner-event strong', node => node.textContent?.trim() || '');
-  await page.click('.calendar-planner-host .planner-event');
+  await clickNow('.calendar-planner-host .planner-event');
   await page.waitForSelector('.capture-pro form[data-capture-form-kind]', { timeout: 10_000 });
   const editState = await page.evaluate(() => {
     const form = document.querySelector('.capture-pro form[data-capture-form-kind]');
