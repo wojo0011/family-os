@@ -1,0 +1,100 @@
+:root[data-soft3d="active"] .content:has(> .stack > .hero-grid) {
+  position: relative;
+  max-width: none;
+  width: 100%;
+  min-height: calc(100vh - 68px);
+  margin: 0;
+  overflow: visible;
+  isolation: isolate;
+}
+
+:root[data-soft3d="active"] .content:has(> .stack > .hero-grid) > .stack {
+  position: relative;
+  z-index: 4;
+  width: min(1480px, 100%);
+  margin-inline: auto;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.soft-3d-layer {
+  position: fixed;
+  top: 68px;
+  left: 220px;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255,159,200,.24), transparent 24%),
+    radial-gradient(circle at 78% 22%, rgba(205,179,255,.22), transparent 26%),
+    radial-gradient(circle at 52% 72%, rgba(255,217,174,.12), transparent 32%),
+    linear-gradient(180deg, #211626 0%, #2b1d31 38%, #39263f 68%, #211722 100%);
+}
+
+.soft-3d-layer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 0 34%, rgba(255,255,255,.035) 44%, transparent 54%),
+    radial-gradient(ellipse at 50% 110%, rgba(255,179,213,.12), transparent 48%);
+  animation: soft-ambient-shift 18s ease-in-out infinite alternate;
+}
+
+.soft-3d-layer::after {
+  content: "";
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  bottom: -12%;
+  height: 42%;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 35%, rgba(255,255,255,.04), transparent 46%), linear-gradient(180deg, transparent, rgba(24,15,27,.62));
+  filter: blur(1px);
+}
+
+.soft-3d-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+:root[data-soft-panels-hidden="true"] .content:has(> .stack > .hero-grid) > .stack {
+  opacity: 0;
+  transform: translateY(10px) scale(.992);
+  pointer-events: none;
+}
+
+@keyframes soft-ambient-shift {
+  from { transform: translate3d(-1.2%, 0, 0) scale(1.01); opacity: .72; }
+  to { transform: translate3d(1.2%, -1%, 0) scale(1.035); opacity: 1; }
+}
+
+@media (max-width: 1050px) {
+  .soft-3d-layer { left: 76px; }
+}
+
+@media (max-width: 720px) {
+  :root[data-soft3d="active"] .content:has(> .stack > .hero-grid) {
+    min-height: calc(100vh - 124px);
+  }
+
+  .soft-3d-layer {
+    top: 60px;
+    left: 0;
+    bottom: 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .soft-3d-layer::before { animation: none; }
+  :root[data-soft3d="active"] .content:has(> .stack > .hero-grid) > .stack { transition: none; }
+}
