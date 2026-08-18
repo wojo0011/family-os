@@ -7,9 +7,11 @@ import { installSpace3DLauncher } from './space3DLauncher';
 import { installMidnight3DLauncher } from './midnight3DLauncher';
 import { installNature3DLauncher } from './nature3DLauncher';
 import { installSoft3DLauncher } from './soft3DLauncher';
+import { installCaptureModalEnhancement } from './captureModalEnhancement';
 import './styles.css';
 import './enhancements.css';
 import './weather.css';
+import './captureModal.css';
 
 // Recovery-first boot: the application shell stays lightweight. No Three.js,
 // WebGL, planet textures, rover scene, city skyline, Nature or Soft scene starts here.
@@ -19,6 +21,7 @@ installSpace3DLauncher();
 installMidnight3DLauncher();
 installNature3DLauncher();
 installSoft3DLauncher();
+installCaptureModalEnhancement();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Family OS root element is missing.');
