@@ -57,7 +57,6 @@ try {
   });
   await page.waitForSelector('.money-module-host .money-module', { timeout: 15_000 });
 
-  // Bill workflow.
   await clickNow('[data-money-add-bill]');
   await page.waitForSelector('[data-money-modal] input[name="bill"]', { timeout: 10_000 });
   await setValueNow('[data-money-modal] input[name="bill"]', 'Live Hydro');
@@ -88,7 +87,6 @@ try {
   });
   if (!billId) throw new Error('Saved bill id not found.');
 
-  // Linked receipt: should NOT increase report total.
   await clickNow('[data-money-add-receipt]');
   await page.waitForSelector('[data-money-modal] input[name="merchant"]', { timeout: 10_000 });
   await setValueNow('[data-money-modal] input[name="merchant"]', 'Hydro receipt');
@@ -105,7 +103,6 @@ try {
   });
   await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-money-receipt-row] strong')).some(node => node.textContent?.includes('Hydro receipt')), { timeout: 10_000 });
 
-  // Unlinked receipt: DOES count in report.
   await clickNow('[data-money-add-receipt]');
   await page.waitForSelector('[data-money-modal] input[name="merchant"]', { timeout: 10_000 });
   await setValueNow('[data-money-modal] input[name="merchant"]', 'Coffee receipt');
@@ -121,7 +118,6 @@ try {
   });
   await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-money-receipt-row] strong')).some(node => node.textContent?.includes('Coffee receipt')), { timeout: 10_000 });
 
-  // Standalone expense.
   await clickNow('[data-money-add-expense]');
   await page.waitForSelector('[data-money-modal] input[name="merchant"]', { timeout: 10_000 });
   await setValueNow('[data-money-modal] input[name="merchant"]', 'Live groceries');
@@ -137,10 +133,8 @@ try {
   });
   await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-money-expense-row] strong')).some(node => node.textContent?.includes('Live groceries')), { timeout: 10_000 });
 
-  // Verify report semantics: 187.42 paid bill + 12.34 unlinked receipt + 50.25 expense = 250.01.
   await page.waitForFunction(() => (document.querySelector('[data-money-report]')?.textContent || '').includes('$250.01'), { timeout: 10_000 });
 
-  // Edit bill amount and ensure report updates, proving edit + report recomputation.
   await page.evaluate(() => {
     const row = Array.from(document.querySelectorAll('[data-money-bill-row]')).find(node => node.textContent?.includes('Live Hydro'));
     const edit = Array.from(row?.querySelectorAll('button') ?? []).find(button => button.textContent?.trim() === 'Edit');
@@ -166,7 +160,8 @@ try {
   if (!linkedReceipt || linkedReceipt.values.linkedBillId !== bill.id) throw new Error(`Linked receipt did not persist bill link: ${JSON.stringify(linkedReceipt)}`);
   if (!freeReceipt || freeReceipt.values.amount !== '12.34') throw new Error('Unlinked receipt missing.');
   if (!expense || expense.values.amount !== '50.25') throw new Error('Expense missing.');
-  if (!document.querySelector('[data-money-report]')) throw new Error('Money report is missing.');
+  const reportExists = await page.$('[data-money-report]');
+  if (!reportExists) throw new Error('Money report is missing.');
   if (errors.length) throw new Error(`Browser errors during live money test:\n${errors.join('\n')}`);
 
   console.log('LIVE_MONEY_SMOKE_PASS', JSON.stringify({
