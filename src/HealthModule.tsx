@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   addCaptureRecord,
   captureRecordDateLabel,
@@ -18,10 +18,29 @@ import {
   type HealthProviderType,
   type ProviderPerson,
 } from './healthProviderStore';
+import {
+  clearMedicationDose,
+  doseLogFor,
+  loadMedicationAdherence,
+  normalizeDoseTimes,
+  recordMedicationDose,
+  removeMedicationAdherence,
+  saveMedicationSchedule,
+  scheduleForMedication,
+  subscribeMedicationAdherence,
+  type MedicationAdherenceState,
+  type MedicationDoseStatus,
+} from './medicationDoseStore';
 
 const PEOPLE: ProviderPerson[] = ['Family', 'Dad', 'Mom', 'Teen', 'Child'];
 const HEALTH_ENTRY_TYPES = ['Temperature', 'Symptom', 'Blood pressure', 'Heart rate', 'Weight', 'Doctor note', 'Other'] as const;
 const MEDICATION_STATUSES = ['Active', 'Paused', 'Completed'] as const;
+const DOSE_PRESETS = [
+  { label: 'Morning', time: '08:00' },
+  { label: 'Noon', time: '12:00' },
+  { label: 'Evening', time: '20:00' },
+  { label: 'Bedtime', time: '22:00' },
+] as const;
 
 const EMPTY_PROVIDER: HealthProviderInput = {
   name: '', type: 'Family doctor', organization: '', person: 'Family', phone: '', email: '',
@@ -31,6 +50,14 @@ const EMPTY_PROVIDER: HealthProviderInput = {
 type HealthAlert = { id: string; icon: string; title: string; detail: string; level: 'now' | 'soon' | 'follow-up'; providerId?: string };
 type HealthRecordKind = 'Medication' | 'Health entry';
 type HealthRecordEditor = { kind: HealthRecordKind; record: CaptureRecord | null } | null;
+type ScheduleType = 'Scheduled' | 'As needed';
+
+type TodayDose = {
+  medication: CaptureRecord;
+  time: string;
+  state: 'upcoming' | 'due' | MedicationDoseStatus;
+  recordedAt?: string;
+};
 
 const isoDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
@@ -130,10 +157,36 @@ function medicationStatus(record: CaptureRecord) {
   return 'Active';
 }
 
+function medicationDoseTimes(record: CaptureRecord) {
+  const configured = (record.values.doseTimes || '').split(',').map(value => value.trim()).filter(Boolean);
+  return normalizeDoseTimes(configured.length ? configured : record.values.time ? [record.values.time] : []);
+}
+
+function medicationAppliesOnDate(record: CaptureRecord, date: string) {
+  if (medicationStatus(record) !== 'Active') return false;
+  if (record.values.scheduleType === 'As needed') return false;
+  if (record.values.startDate && date < record.values.startDate) return false;
+  if (record.values.endDate && date > record.values.endDate) return false;
+  return true;
+}
+
 function recordValues(form: HTMLFormElement) {
   const values: Record<string, string> = {};
   new FormData(form).forEach((value, key) => { values[key] = String(value); });
   return values;
+}
+
+function prettyTime(time: string) {
+  const [hours, minutes] = time.split(':').map(Number);
+  const date = new Date(2000, 0, 1, hours, minutes);
+  return new Intl.DateTimeFormat('en-CA', { hour: 'numeric', minute: '2-digit' }).format(date);
+}
+
+function doseStateLabel(state: TodayDose['state']) {
+  if (state === 'taken') return 'Taken';
+  if (state === 'skipped') return 'Skipped';
+  if (state === 'due') return 'Due';
+  return 'Upcoming';
 }
 
 const normalizeWebsite = (value: string) => !value ? '' : value.includes('://') ? value : `https://${value}`;
@@ -147,12 +200,56 @@ export default function HealthModule({ providers, records }: { providers: Health
   const [appointmentErrors, setAppointmentErrors] = useState<Record<string, string>>({});
   const [recordEditor, setRecordEditor] = useState<HealthRecordEditor>(null);
   const [recordErrors, setRecordErrors] = useState<Record<string, string>>({});
+  const [doseTimesDraft, setDoseTimesDraft] = useState<string[]>(['09:00']);
+  const [scheduleTypeDraft, setScheduleTypeDraft] = useState<ScheduleType>('Scheduled');
+  const [medicationRemindersDraft, setMedicationRemindersDraft] = useState(true);
+  const [adherence, setAdherence] = useState<MedicationAdherenceState>(() => loadMedicationAdherence());
+  const [clock, setClock] = useState(() => Date.now());
   const [notificationState, setNotificationState] = useState(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
+
+  useEffect(() => subscribeMedicationAdherence(setAdherence), []);
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const alerts = useMemo(() => buildAlerts(providers, records), [providers, records]);
   const medications = records.filter(record => record.kind === 'Medication');
   const healthEntries = records.filter(record => record.kind === 'Health entry');
   const activeMedications = medications.filter(record => medicationStatus(record) === 'Active').length;
+  const today = isoDate(new Date(clock));
+
+  const todaysDoses = useMemo<TodayDose[]>(() => {
+    const now = new Date(clock);
+    return medications
+      .filter(record => medicationAppliesOnDate(record, today))
+      .flatMap(record => {
+        const fallbackTimes = medicationDoseTimes(record);
+        const fallbackReminders = record.values.remindersEnabled !== 'false';
+        const schedule = scheduleForMedication(record.id, fallbackTimes, fallbackReminders, adherence);
+        return schedule.doseTimes.map(time => {
+          const log = doseLogFor(record.id, today, time, adherence);
+          const dueAt = new Date(`${today}T${time}:00`);
+          const state: TodayDose['state'] = log?.status ?? (dueAt.getTime() <= now.getTime() ? 'due' : 'upcoming');
+          return { medication: record, time, state, recordedAt: log?.recordedAt };
+        });
+      })
+      .sort((a, b) => a.time.localeCompare(b.time));
+  }, [medications, adherence, today, clock]);
+
+  const recentDoseLogs = useMemo(() => adherence.logs
+    .filter(log => medications.some(record => record.id === log.medicationId))
+    .slice()
+    .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))
+    .slice(0, 20), [adherence.logs, medications]);
+
+  const sevenDaysAgo = Date.now() - 7 * 86_400_000;
+  const sevenDayLogs = adherence.logs.filter(log => new Date(log.recordedAt).getTime() >= sevenDaysAgo);
+  const sevenDayTaken = sevenDayLogs.filter(log => log.status === 'taken').length;
+  const sevenDayAdherence = sevenDayLogs.length ? Math.round((sevenDayTaken / sevenDayLogs.length) * 100) : null;
+  const todayTaken = todaysDoses.filter(dose => dose.state === 'taken').length;
+  const todaySkipped = todaysDoses.filter(dose => dose.state === 'skipped').length;
+  const todayOpen = todaysDoses.filter(dose => dose.state === 'due' || dose.state === 'upcoming').length;
 
   const openNew = () => { setMode('new'); setEditingProvider(null); setDraft(EMPTY_PROVIDER); setErrors({}); };
   const openEdit = (provider: HealthProvider) => {
@@ -160,6 +257,21 @@ export default function HealthModule({ providers, records }: { providers: Health
     setMode('edit'); setEditingProvider(provider); setDraft(values); setErrors({});
   };
   const closeProvider = () => { setMode(null); setEditingProvider(null); setErrors({}); };
+
+  const openHealthRecord = (kind: HealthRecordKind, record: CaptureRecord | null) => {
+    setRecordErrors({});
+    setRecordEditor({ kind, record });
+    if (kind === 'Medication') {
+      const scheduleType = record?.values.scheduleType === 'As needed' ? 'As needed' : 'Scheduled';
+      setScheduleTypeDraft(scheduleType);
+      const fallbackTimes = record ? medicationDoseTimes(record) : ['09:00'];
+      const schedule = record
+        ? scheduleForMedication(record.id, fallbackTimes, record.values.remindersEnabled !== 'false', adherence)
+        : null;
+      setDoseTimesDraft(scheduleType === 'Scheduled' ? (schedule?.doseTimes.length ? schedule.doseTimes : fallbackTimes.length ? fallbackTimes : ['09:00']) : []);
+      setMedicationRemindersDraft(scheduleType === 'Scheduled' ? (schedule?.remindersEnabled ?? true) : false);
+    }
+  };
 
   const saveProvider = () => {
     const result = mode === 'new' ? addHealthProvider(draft) : editingProvider ? updateHealthProvider(editingProvider.id, draft) : null;
@@ -176,7 +288,7 @@ export default function HealthModule({ providers, records }: { providers: Health
     if (typeof Notification === 'undefined') return;
     const permission = await Notification.requestPermission();
     setNotificationState(permission);
-    if (permission === 'granted') new Notification('Family OS health reminders enabled', { body: 'Upcoming appointments, reminders and provider follow-ups can notify you while Family OS is open.' });
+    if (permission === 'granted') new Notification('Family OS health reminders enabled', { body: 'Appointments, medication doses and provider follow-ups can notify you while Family OS is open.' });
   };
 
   const saveAppointment = (form: HTMLFormElement) => {
@@ -188,6 +300,19 @@ export default function HealthModule({ providers, records }: { providers: Health
   const saveHealthRecord = (form: HTMLFormElement) => {
     if (!recordEditor) return;
     const values = recordValues(form);
+
+    if (recordEditor.kind === 'Medication') {
+      const normalizedTimes = scheduleTypeDraft === 'Scheduled' ? normalizeDoseTimes(doseTimesDraft) : [];
+      if (scheduleTypeDraft === 'Scheduled' && normalizedTimes.length === 0) {
+        setRecordErrors({ doseTimes: 'Add at least one daily dose time, or choose As needed.' });
+        return;
+      }
+      values.scheduleType = scheduleTypeDraft;
+      values.doseTimes = normalizedTimes.join(',');
+      values.time = normalizedTimes[0] ?? '';
+      values.remindersEnabled = scheduleTypeDraft === 'Scheduled' && medicationRemindersDraft ? 'true' : 'false';
+    }
+
     const result = recordEditor.record
       ? updateCaptureRecord(recordEditor.record.id, values)
       : addCaptureRecord(recordEditor.kind, values);
@@ -195,6 +320,15 @@ export default function HealthModule({ providers, records }: { providers: Health
       setRecordErrors(result.validation?.errors ?? { form: 'Unable to save this record.' });
       return;
     }
+
+    if (recordEditor.kind === 'Medication') {
+      saveMedicationSchedule(
+        result.record.id,
+        scheduleTypeDraft === 'Scheduled' ? doseTimesDraft : [],
+        scheduleTypeDraft === 'Scheduled' && medicationRemindersDraft,
+      );
+    }
+
     setRecordErrors({});
     setRecordEditor(null);
   };
@@ -202,20 +336,60 @@ export default function HealthModule({ providers, records }: { providers: Health
   const removeHealthRecord = (record: CaptureRecord) => {
     if (!window.confirm(`Remove ${record.kind === 'Medication' ? record.values.medication || 'this medication' : record.values.entryType || 'this health record'}?`)) return;
     removeCaptureRecord(record.id);
+    if (record.kind === 'Medication') removeMedicationAdherence(record.id);
     if (recordEditor?.record?.id === record.id) setRecordEditor(null);
+  };
+
+  const markDose = (dose: TodayDose, status: MedicationDoseStatus) => {
+    recordMedicationDose(dose.medication.id, today, dose.time, status);
+  };
+
+  const undoDose = (dose: TodayDose) => {
+    clearMedicationDose(dose.medication.id, today, dose.time);
+  };
+
+  const addDoseTime = (time = '12:00') => {
+    setDoseTimesDraft(previous => normalizeDoseTimes([...previous, time]));
+  };
+
+  const updateDoseTime = (index: number, time: string) => {
+    setDoseTimesDraft(previous => previous.map((value, current) => current === index ? time : value));
+  };
+
+  const removeDoseTime = (index: number) => {
+    setDoseTimesDraft(previous => previous.filter((_, current) => current !== index));
   };
 
   const pharmacies = providers.filter(provider => provider.type === 'Pharmacy');
   const clinicians = providers.filter(provider => provider.type !== 'Pharmacy');
 
   return <div className="stack health-module">
-    <header className="module-hero health-hero"><span className="eyebrow">Family OS · Health</span><h1>Health, medications, appointments and providers.</h1><p>Keep reusable provider details, medication schedules, health readings and follow-up reminders together. Everything stays local until cloud sync is connected.</p></header>
+    <header className="module-hero health-hero"><span className="eyebrow">Family OS · Health</span><h1>Health, medications, appointments and providers.</h1><p>Keep reusable provider details, medication schedules, dose history, health readings and follow-up reminders together. Everything stays local until cloud sync is connected.</p></header>
 
     <section className="health-summary-grid health-summary-grid-four">
       <article className="panel health-summary-card"><span>🩺</span><div><strong>{providers.length}</strong><small>Providers</small></div></article>
       <article className="panel health-summary-card"><span>💊</span><div><strong>{activeMedications}</strong><small>Active medications</small></div></article>
-      <article className="panel health-summary-card"><span>🌡</span><div><strong>{healthEntries.length}</strong><small>Health records</small></div></article>
+      <article className="panel health-summary-card"><span>✓</span><div><strong>{todayTaken}/{todaysDoses.length || 0}</strong><small>Doses taken today</small></div></article>
       <article className="panel health-summary-card"><span>🔔</span><div><strong>{alerts.length}</strong><small>Health reminders</small></div></article>
+    </section>
+
+    <section className="panel medication-today-panel" data-medication-today>
+      <header>
+        <div><span className="eyebrow">Medication adherence</span><h2>Today’s doses</h2><p>Mark each scheduled dose as taken or skipped. History stays separate from medication settings.</p></div>
+        <div className="dose-summary-pills"><span className="dose-summary-taken">✓ {todayTaken} taken</span><span>{todayOpen} open</span>{todaySkipped ? <span className="dose-summary-skipped">{todaySkipped} skipped</span> : null}{sevenDayAdherence != null ? <span>{sevenDayAdherence}% 7-day logged</span> : null}</div>
+      </header>
+      {todaysDoses.length ? <div className="today-dose-list">{todaysDoses.map(dose => <article className={`today-dose-row dose-state-${dose.state}`} key={`${dose.medication.id}:${dose.time}`} data-medication-dose={`${dose.medication.id}:${dose.time}`}>
+        <time>{prettyTime(dose.time)}</time>
+        <span className="dose-pill-icon">💊</span>
+        <div className="today-dose-main"><strong>{dose.medication.values.medication}</strong><small>{dose.medication.values.person || 'Family'} · {dose.medication.values.directions}</small></div>
+        <span className="dose-state-label">{doseStateLabel(dose.state)}</span>
+        <div className="dose-actions">{dose.state === 'taken' || dose.state === 'skipped' ? <button onClick={() => undoDose(dose)}>Undo</button> : <><button className="dose-taken" data-dose-taken onClick={() => markDose(dose, 'taken')}>✓ Taken</button><button className="dose-skipped" data-dose-skipped onClick={() => markDose(dose, 'skipped')}>Skip</button></>}</div>
+      </article>)}</div> : <div className="health-empty"><span>💊</span><div><strong>No scheduled doses today.</strong><small>Add an active medication with one or more daily dose times. As-needed medications do not create scheduled reminders.</small></div></div>}
+      {recentDoseLogs.length ? <details className="dose-history"><summary>Recent dose history · {recentDoseLogs.length} entries</summary><div className="dose-history-list">{recentDoseLogs.map(log => {
+        const medication = medications.find(record => record.id === log.medicationId);
+        if (!medication) return null;
+        return <article key={log.id}><span className={log.status === 'taken' ? 'dose-history-taken' : 'dose-history-skipped'}>{log.status === 'taken' ? '✓' : '–'}</span><div><strong>{medication.values.medication}</strong><small>{log.date} · {prettyTime(log.time)} · {log.status === 'taken' ? 'Taken' : 'Skipped'}</small></div></article>;
+      })}</div></details> : null}
     </section>
 
     <section className="panel health-alert-panel">
@@ -225,12 +399,15 @@ export default function HealthModule({ providers, records }: { providers: Health
     </section>
 
     <section className="panel health-record-panel medication-panel">
-      <header><div><span className="eyebrow">Medication list</span><h2>Medications</h2><p>Track current medicines, directions, schedule, dates and provider context.</p></div><button className="primary" data-health-add-medication onClick={() => { setRecordErrors({}); setRecordEditor({ kind: 'Medication', record: null }); }}>+ Add medication</button></header>
+      <header><div><span className="eyebrow">Medication list</span><h2>Medications</h2><p>Track current medicines, directions, daily schedule, reminders and provider context.</p></div><button className="primary" data-health-add-medication onClick={() => openHealthRecord('Medication', null)}>+ Add medication</button></header>
       {medications.length ? <div className="medication-grid">{medications.map(record => {
         const status = medicationStatus(record);
+        const schedule = scheduleForMedication(record.id, medicationDoseTimes(record), record.values.remindersEnabled !== 'false', adherence);
+        const asNeeded = record.values.scheduleType === 'As needed';
         return <article className="medication-card" key={record.id} data-health-medication-card>
-          <div className="medication-card-head"><span className="medication-icon">💊</span><div><span className={`health-status health-status-${status.toLowerCase()}`}>{status}</span><h3>{record.values.medication}</h3><small>{record.values.person || 'Family'}{record.values.time ? ` · ${record.values.time}` : ''}</small></div><button onClick={() => { setRecordErrors({}); setRecordEditor({ kind: 'Medication', record }); }}>Edit</button></div>
+          <div className="medication-card-head"><span className="medication-icon">💊</span><div><span className={`health-status health-status-${status.toLowerCase()}`}>{status}</span><h3>{record.values.medication}</h3><small>{record.values.person || 'Family'} · {asNeeded ? 'As needed' : schedule.doseTimes.length ? schedule.doseTimes.map(prettyTime).join(' · ') : 'No dose times'}</small></div><button onClick={() => openHealthRecord('Medication', record)}>Edit</button></div>
           <p className="medication-directions">{record.values.directions}</p>
+          {!asNeeded && schedule.doseTimes.length ? <div className="medication-dose-chips">{schedule.doseTimes.map(time => <span key={time}>{prettyTime(time)}</span>)}<span className={schedule.remindersEnabled ? 'reminders-on' : ''}>{schedule.remindersEnabled ? '🔔 Reminders on' : 'Reminders off'}</span></div> : <div className="medication-dose-chips"><span>PRN · no scheduled reminder</span></div>}
           <div className="medication-meta"><span>Start · {record.values.startDate || '—'}</span><span>End · {record.values.endDate || 'Open-ended'}</span>{record.values.prescribedBy ? <span>Prescriber · {record.values.prescribedBy}</span> : null}{record.values.pharmacy ? <span>Pharmacy · {record.values.pharmacy}</span> : null}</div>
           {record.values.notes ? <small className="medication-notes">{record.values.notes}</small> : null}
         </article>;
@@ -238,11 +415,11 @@ export default function HealthModule({ providers, records }: { providers: Health
     </section>
 
     <section className="panel health-record-panel">
-      <header><div><span className="eyebrow">Health history</span><h2>Health records</h2><p>Save readings, symptoms and clinical notes as a searchable local history.</p></div><button className="primary" data-health-add-record onClick={() => { setRecordErrors({}); setRecordEditor({ kind: 'Health entry', record: null }); }}>+ Add health record</button></header>
+      <header><div><span className="eyebrow">Health history</span><h2>Health records</h2><p>Save readings, symptoms and clinical notes as a searchable local history.</p></div><button className="primary" data-health-add-record onClick={() => openHealthRecord('Health entry', null)}>+ Add health record</button></header>
       {healthEntries.length ? <div className="health-entry-list">{healthEntries.map(record => <article className="health-entry-row" key={record.id} data-health-entry-row>
         <span className="health-entry-icon">{healthEntryIcon(record.values.entryType)}</span>
         <div><strong>{record.values.entryType || 'Health entry'} · {record.values.value}{record.values.unit ? ` ${record.values.unit}` : ''}</strong><small>{record.values.person || 'Family'} · {captureRecordDateLabel(record)}{record.values.time ? ` · ${record.values.time}` : ''}{record.values.provider ? ` · ${record.values.provider}` : ''}</small>{record.values.notes ? <p>{record.values.notes}</p> : null}</div>
-        <button onClick={() => { setRecordErrors({}); setRecordEditor({ kind: 'Health entry', record }); }}>Edit</button>
+        <button onClick={() => openHealthRecord('Health entry', record)}>Edit</button>
       </article>)}</div> : <div className="health-empty"><span>🌡</span><div><strong>No health records saved yet.</strong><small>Add a temperature, symptom, blood pressure reading, weight, doctor note or another health entry.</small></div></div>}
     </section>
 
@@ -258,7 +435,7 @@ export default function HealthModule({ providers, records }: { providers: Health
     </section>
 
     {recordEditor ? <div className="health-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setRecordEditor(null); }}><section className="health-modal health-record-modal" role="dialog" aria-modal="true" data-health-record-modal aria-label={recordEditor.record ? `Edit ${recordEditor.kind}` : `Add ${recordEditor.kind}`}>
-      <header><div><span className="eyebrow">{recordEditor.record ? 'Edit health record' : 'New health record'}</span><h2>{recordEditor.kind === 'Medication' ? 'Medication' : 'Health entry'}</h2><p>{recordEditor.kind === 'Medication' ? 'Medication details are stored locally and can be edited any time.' : 'Save a dated reading, symptom or clinical note.'}</p></div><button onClick={() => setRecordEditor(null)} aria-label="Close">×</button></header>
+      <header><div><span className="eyebrow">{recordEditor.record ? 'Edit health record' : 'New health record'}</span><h2>{recordEditor.kind === 'Medication' ? 'Medication' : 'Health entry'}</h2><p>{recordEditor.kind === 'Medication' ? 'Set one or more dose times, reminders and prescription context.' : 'Save a dated reading, symptom or clinical note.'}</p></div><button onClick={() => setRecordEditor(null)} aria-label="Close">×</button></header>
       <form onSubmit={event => { event.preventDefault(); saveHealthRecord(event.currentTarget); }}>
         {recordErrors.form ? <div className="health-record-error-summary">{recordErrors.form}</div> : null}
         {recordEditor.kind === 'Medication' ? <div className="health-form-grid">
@@ -266,7 +443,14 @@ export default function HealthModule({ providers, records }: { providers: Health
           <label><span>Status</span><select name="status" defaultValue={recordEditor.record?.values.status || 'Active'}>{MEDICATION_STATUSES.map(status => <option key={status}>{status}</option>)}</select></label>
           <label className="wide"><span>Directions</span><input name="directions" defaultValue={recordEditor.record?.values.directions || ''} placeholder="1 tablet with food" />{recordErrors.directions ? <small className="health-field-error">{recordErrors.directions}</small> : null}</label>
           <label><span>For</span><select name="person" defaultValue={recordEditor.record?.values.person || 'Family'}>{PEOPLE.map(person => <option key={person}>{person}</option>)}</select></label>
-          <label><span>Schedule time</span><input name="time" type="time" defaultValue={recordEditor.record?.values.time || '09:00'} />{recordErrors.time ? <small className="health-field-error">{recordErrors.time}</small> : null}</label>
+          <label><span>Schedule type</span><select name="scheduleType" value={scheduleTypeDraft} onChange={event => { const value = event.target.value as ScheduleType; setScheduleTypeDraft(value); if (value === 'As needed') { setDoseTimesDraft([]); setMedicationRemindersDraft(false); } else if (!doseTimesDraft.length) { setDoseTimesDraft(['09:00']); } }}><option>Scheduled</option><option>As needed</option></select></label>
+          {scheduleTypeDraft === 'Scheduled' ? <div className="wide medication-schedule-editor">
+            <div className="medication-schedule-head"><div><span>Dose times</span><small>Up to 8 times per day. These drive Today and browser reminders.</small></div><button type="button" onClick={() => addDoseTime()}>+ Add time</button></div>
+            <div className="dose-time-grid">{doseTimesDraft.map((time, index) => <div className="dose-time-control" key={`${index}:${time}`}><input type="time" value={time} onChange={event => updateDoseTime(index, event.target.value)} /><button type="button" aria-label={`Remove ${time}`} onClick={() => removeDoseTime(index)}>×</button></div>)}</div>
+            <div className="dose-preset-row">{DOSE_PRESETS.map(preset => <button type="button" key={preset.time} onClick={() => addDoseTime(preset.time)}>{preset.label} · {prettyTime(preset.time)}</button>)}</div>
+            {recordErrors.doseTimes ? <small className="health-field-error">{recordErrors.doseTimes}</small> : null}
+            <label className="medication-reminder-toggle"><input type="checkbox" checked={medicationRemindersDraft} onChange={event => setMedicationRemindersDraft(event.target.checked)} /><span>🔔 Remind me when scheduled doses are coming up</span></label>
+          </div> : <div className="wide medication-prn-note"><strong>As-needed medication</strong><small>No automatic daily dose or browser reminder will be generated. You can still keep the medication in the list.</small></div>}
           <label><span>Start date</span><input name="startDate" type="date" defaultValue={recordEditor.record?.values.startDate || isoDate(new Date())} />{recordErrors.startDate ? <small className="health-field-error">{recordErrors.startDate}</small> : null}</label>
           <label><span>End date</span><input name="endDate" type="date" defaultValue={recordEditor.record?.values.endDate || ''} />{recordErrors.endDate ? <small className="health-field-error">{recordErrors.endDate}</small> : null}</label>
           <label><span>Prescribed by</span><select name="prescribedBy" defaultValue={recordEditor.record?.values.prescribedBy || ''}><option value="">Not linked</option>{clinicians.map(provider => <option key={provider.id} value={provider.name}>{provider.name}</option>)}</select></label>
