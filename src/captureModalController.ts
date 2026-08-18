@@ -44,6 +44,7 @@ let activeOverlay: HTMLElement | null = null;
 let previousFocus: HTMLElement | null = null;
 let motionPromise: Promise<MotionModule | null> | null = null;
 let closing = false;
+let transitioning = false;
 
 function loadMotion() {
   if (!motionPromise) {
@@ -57,7 +58,11 @@ function loadMotion() {
   return motionPromise;
 }
 
-async function animateElement(target: Element | null, keyframes: Record<string, unknown>, options: Record<string, unknown>) {
+async function animateElement(
+  target: Element | null,
+  keyframes: Record<string, unknown>,
+  options: Record<string, unknown>,
+) {
   if (!target) return;
   const motion = await loadMotion();
   if (motion?.animate) {
@@ -71,6 +76,7 @@ async function animateElement(target: Element | null, keyframes: Record<string, 
   const keys = Object.keys(keyframes);
   const maxLength = Math.max(...keys.map(key => Array.isArray(keyframes[key]) ? (keyframes[key] as unknown[]).length : 1));
   const frames: Keyframe[] = [];
+
   for (let index = 0; index < maxLength; index += 1) {
     const frame: Record<string, unknown> = {};
     keys.forEach(key => {
@@ -79,6 +85,7 @@ async function animateElement(target: Element | null, keyframes: Record<string, 
     });
     frames.push(frame as Keyframe);
   }
+
   const animation = element.animate(frames, {
     duration: durationSeconds * 1000,
     easing: 'cubic-bezier(.22,1,.36,1)',
@@ -123,6 +130,7 @@ function textArea(label: string, name: string, placeholder: string, required = f
 function formFields(kind: CaptureKind) {
   const date = todayValue();
   const time = timeValue();
+
   switch (kind) {
     case 'Event':
       return [
@@ -229,6 +237,7 @@ function definitionFor(kind: CaptureKind) {
 function renderSavedRecords() {
   const records = loadCaptureRecords();
   if (!records.length) return '';
+
   return `
     <section class="capture-local-records">
       <div class="capture-local-head"><div><span class="eyebrow">Saved locally</span><strong>${records.length} record${records.length === 1 ? '' : 's'}</strong></div><small>Recent records · remove anything you no longer need</small></div>
@@ -246,6 +255,7 @@ function renderSavedRecords() {
 }
 
 function renderSelection(stage: HTMLElement) {
+  stage.dataset.captureView = 'menu';
   stage.innerHTML = `
     <div class="capture-view capture-view-menu">
       <header class="capture-pro-header">
@@ -262,6 +272,7 @@ function renderSelection(stage: HTMLElement) {
 
 function renderForm(stage: HTMLElement, kind: CaptureKind) {
   const item = definitionFor(kind);
+  stage.dataset.captureView = 'form';
   stage.innerHTML = `
     <div class="capture-view capture-view-form" style="--capture-accent:${item.accent}">
       <header class="capture-pro-header capture-form-header">
@@ -269,7 +280,7 @@ function renderForm(stage: HTMLElement, kind: CaptureKind) {
         <div class="capture-form-heading"><span class="capture-form-icon">${item.icon}</span><div><span class="eyebrow">Add record</span><h2>${item.kind}</h2><p>${item.description}</p></div></div>
         <button type="button" class="capture-icon-button" data-capture-close aria-label="Close">×</button>
       </header>
-      <form class="capture-form" data-capture-form data-capture-kind="${item.kind}" novalidate>
+      <form class="capture-form" data-capture-form data-capture-form-kind="${item.kind}" novalidate>
         <div class="capture-validation-summary" data-capture-validation hidden></div>
         <div class="capture-form-grid">${formFields(kind)}</div>
         <div class="capture-form-actions"><button type="button" class="capture-secondary" data-capture-back>Back</button><button type="submit" class="capture-save">Save ${item.kind}</button></div>
@@ -279,6 +290,7 @@ function renderForm(stage: HTMLElement, kind: CaptureKind) {
 
 function renderSuccess(stage: HTMLElement, kind: CaptureKind) {
   const item = definitionFor(kind);
+  stage.dataset.captureView = 'success';
   stage.innerHTML = `<div class="capture-view capture-success" style="--capture-accent:${item.accent}"><div class="capture-success-mark">✓</div><span class="eyebrow">Saved locally</span><h2>${item.kind} added</h2><p>The record is validated, persisted in this browser, and available to Family OS immediately.</p><div><button type="button" class="capture-secondary" data-capture-add-another>Add another</button><button type="button" class="capture-save" data-capture-close>Done</button></div></div>`;
 }
 
@@ -317,12 +329,29 @@ function showValidation(form: HTMLFormElement, errors: Record<string, string>) {
   firstControl?.focus({ preventScroll: false });
 }
 
+function clearStageAnimationStyles(stage: HTMLElement) {
+  stage.style.removeProperty('opacity');
+  stage.style.removeProperty('transform');
+  stage.style.removeProperty('translate');
+}
+
 async function transitionStage(stage: HTMLElement, render: () => void, direction: 1 | -1) {
-  await animateElement(stage, { opacity: [1, 0], x: [0, direction * -34] }, { duration: 0.16, ease: [0.4, 0, 1, 1] });
-  render();
-  stage.style.opacity = '0';
-  stage.style.transform = `translateX(${direction * 38}px)`;
-  requestAnimationFrame(() => void animateElement(stage, { opacity: [0, 1], x: [direction * 38, 0] }, { duration: 0.3, ease: [0.22, 1, 0.36, 1] }));
+  if (transitioning) return;
+  transitioning = true;
+
+  try {
+    await animateElement(stage, { opacity: [1, 0], x: [0, direction * -34] }, { duration: 0.16, ease: [0.4, 0, 1, 1] });
+    render();
+    stage.scrollTop = 0;
+    stage.style.opacity = '0';
+    stage.style.transform = `translateX(${direction * 38}px)`;
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    await animateElement(stage, { opacity: [0, 1], x: [direction * 38, 0] }, { duration: 0.3, ease: [0.22, 1, 0.36, 1] });
+    clearStageAnimationStyles(stage);
+    stage.scrollTop = 0;
+  } finally {
+    transitioning = false;
+  }
 }
 
 function setupDictation(stage: HTMLElement) {
@@ -351,8 +380,11 @@ function setupDictation(stage: HTMLElement) {
       textarea.value = transcript.trim();
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
     };
-    recognition.onend = () => { button.textContent = '🎙 Start dictation'; button.classList.remove('is-listening'); };
-    recognition.onerror = () => recognition.onend?.(new Event('end'));
+    recognition.onend = () => {
+      button.textContent = '🎙 Start dictation';
+      button.classList.remove('is-listening');
+    };
+    recognition.onerror = recognition.onend;
     recognition.start();
   });
 }
@@ -372,12 +404,19 @@ async function closeCapture() {
   previousFocus?.focus({ preventScroll: true });
   previousFocus = null;
   closing = false;
+  transitioning = false;
 }
 
 function bindStage(stage: HTMLElement) {
   stage.addEventListener('click', event => {
-    const target = event.target as HTMLElement;
-    if (target.closest('[data-capture-close]')) { void closeCapture(); return; }
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const closeButton = target.closest<HTMLElement>('[data-capture-close]');
+    if (closeButton) {
+      void closeCapture();
+      return;
+    }
 
     const deleteButton = target.closest<HTMLButtonElement>('[data-capture-delete]');
     if (deleteButton?.dataset.captureDelete) {
@@ -391,20 +430,26 @@ function bindStage(stage: HTMLElement) {
       return;
     }
 
-    const option = target.closest<HTMLElement>('[data-capture-kind]');
-    if (option?.dataset.captureKind) {
-      const kind = option.dataset.captureKind as CaptureKind;
-      void transitionStage(stage, () => { renderForm(stage, kind); setupDictation(stage); }, 1);
+    const backButton = target.closest<HTMLElement>('[data-capture-back], [data-capture-add-another]');
+    if (backButton) {
+      void transitionStage(stage, () => renderSelection(stage), -1);
       return;
     }
 
-    if (target.closest('[data-capture-back]') || target.closest('[data-capture-add-another]')) {
-      void transitionStage(stage, () => renderSelection(stage), -1);
-    }
+    // Only an actual menu option can navigate into a form. Forms deliberately
+    // use data-capture-form-kind, so inputs/labels/selects can never match here.
+    const option = target.closest<HTMLButtonElement>('.capture-option[data-capture-kind]');
+    if (!option || !option.dataset.captureKind) return;
+    const kind = option.dataset.captureKind as CaptureKind;
+    void transitionStage(stage, () => {
+      renderForm(stage, kind);
+      setupDictation(stage);
+    }, 1);
   });
 
   stage.addEventListener('input', event => {
-    const control = event.target as HTMLElement;
+    const control = event.target;
+    if (!(control instanceof HTMLElement)) return;
     const field = control.closest<HTMLElement>('[data-capture-field]');
     if (!field) return;
     field.classList.remove('capture-field-invalid');
@@ -412,10 +457,14 @@ function bindStage(stage: HTMLElement) {
   });
 
   stage.addEventListener('submit', event => {
-    const form = event.target as HTMLFormElement;
-    if (!form.matches('[data-capture-form]')) return;
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.matches('[data-capture-form]')) return;
     event.preventDefault();
-    const kind = form.dataset.captureKind as CaptureKind;
+    const kind = form.dataset.captureFormKind as CaptureKind | undefined;
+    if (!kind) {
+      console.error('Family OS capture form is missing its record kind.');
+      return;
+    }
     const result = addCaptureRecord(kind, formValues(form));
     if (!result.record) {
       showValidation(form, result.validation.errors);
@@ -428,14 +477,27 @@ function bindStage(stage: HTMLElement) {
 
 function trapFocus(event: KeyboardEvent) {
   if (!activeHost) return;
-  if (event.key === 'Escape') { event.preventDefault(); void closeCapture(); return; }
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    void closeCapture();
+    return;
+  }
   if (event.key !== 'Tab') return;
-  const focusable = Array.from(activeHost.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'));
+
+  const focusable = Array.from(activeHost.querySelectorAll<HTMLElement>(
+    'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+  ));
   if (!focusable.length) return;
   const first = focusable[0];
   const last = focusable[focusable.length - 1];
-  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 function enhanceOverlay(overlay: HTMLElement) {
@@ -458,7 +520,9 @@ function enhanceOverlay(overlay: HTMLElement) {
   const stage = host.querySelector<HTMLElement>('.capture-pro-stage')!;
   renderSelection(stage);
   bindStage(stage);
-  host.addEventListener('mousedown', event => { if (event.target === host) void closeCapture(); });
+  host.addEventListener('mousedown', event => {
+    if (event.target === host) void closeCapture();
+  });
 
   requestAnimationFrame(() => {
     void animateElement(overlay, { opacity: [0, 1] }, { duration: 0.22, ease: 'easeOut' });
@@ -469,13 +533,18 @@ function enhanceOverlay(overlay: HTMLElement) {
 
 function sync() {
   const overlay = document.querySelector<HTMLElement>('.overlay');
-  if (overlay) { enhanceOverlay(overlay); return; }
+  if (overlay) {
+    enhanceOverlay(overlay);
+    return;
+  }
+
   if (activeHost) {
     activeHost.remove();
     activeHost = null;
     activeOverlay = null;
     delete document.documentElement.dataset.captureModal;
     closing = false;
+    transitioning = false;
   }
 }
 
