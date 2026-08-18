@@ -1,16 +1,26 @@
 import { loadCaptureRecords, subscribeCaptureRecords, type CaptureRecord } from './localCaptureStore';
 import { loadHealthProviders, subscribeHealthProviders, type HealthProvider } from './healthProviderStore';
+import {
+  doseLogFor,
+  loadMedicationAdherence,
+  normalizeDoseTimes,
+  scheduleForMedication,
+  subscribeMedicationAdherence,
+  type MedicationAdherenceState,
+} from './medicationDoseStore';
 
 const SEEN_KEY = 'family-os:notification-seen-v1';
 const CHECK_MS = 60_000;
-const MAX_SEEN = 200;
+const MAX_SEEN = 300;
 
 let installed = false;
 let timer: number | null = null;
 let unsubscribeCapture: (() => void) | null = null;
 let unsubscribeProviders: (() => void) | null = null;
+let unsubscribeAdherence: (() => void) | null = null;
 let captureRecords: CaptureRecord[] = [];
 let providers: HealthProvider[] = [];
+let adherence: MedicationAdherenceState = { schedules: [], logs: [] };
 
 type PendingNotification = {
   key: string;
@@ -23,6 +33,10 @@ function parseDateTime(date: string | undefined, time: string | undefined) {
   if (!date) return null;
   const parsed = new Date(`${date}T${time || '12:00'}:00`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function isoDate(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function monthsAfter(dateText: string, months: number) {
@@ -85,11 +99,43 @@ function recordNotifications(record: CaptureRecord): PendingNotification[] {
   }];
 }
 
+function medicationNotifications(record: CaptureRecord): PendingNotification[] {
+  if (record.kind !== 'Medication') return [];
+  if (record.values.status === 'Paused' || record.values.status === 'Completed') return [];
+  if (record.values.scheduleType === 'As needed') return [];
+
+  const today = isoDate(new Date());
+  if (record.values.startDate && today < record.values.startDate) return [];
+  if (record.values.endDate && today > record.values.endDate) return [];
+
+  const configured = (record.values.doseTimes || '').split(',').map(value => value.trim()).filter(Boolean);
+  const fallbackTimes = normalizeDoseTimes(configured.length ? configured : record.values.time ? [record.values.time] : []);
+  const schedule = scheduleForMedication(record.id, fallbackTimes, record.values.remindersEnabled !== 'false', adherence);
+  if (!schedule.remindersEnabled || !schedule.doseTimes.length) return [];
+
+  return schedule.doseTimes.flatMap(time => {
+    if (doseLogFor(record.id, today, time, adherence)) return [];
+    const when = parseDateTime(today, time);
+    if (!when) return [];
+    const msUntil = when.getTime() - Date.now();
+    if (msUntil > 30 * 60 * 1000 || msUntil < -60 * 60 * 1000) return [];
+
+    const bucket = msUntil > 0 ? 'soon' : 'due';
+    const medication = record.values.medication || 'Medication';
+    return [{
+      key: `medication:${record.id}:${today}:${time}:${bucket}`,
+      title: bucket === 'soon' ? `Medication coming up · ${medication}` : `Medication dose due · ${medication}`,
+      body: `${time}${record.values.person ? ` · ${record.values.person}` : ''}${record.values.directions ? ` · ${record.values.directions}` : ''}`,
+      tag: `family-os-medication-${record.id}-${time.replace(':', '')}`,
+    }];
+  });
+}
+
 function providerNotification(provider: HealthProvider): PendingNotification | null {
   if (!provider.lastVisitDate || !provider.followUpMonths) return null;
   const due = monthsAfter(provider.lastVisitDate, provider.followUpMonths);
   if (!due || due.getTime() > Date.now()) return null;
-  const dueDate = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
+  const dueDate = isoDate(due);
   return {
     key: `provider-followup:${provider.id}:${dueDate}`,
     title: `${provider.type} follow-up reminder`,
@@ -99,7 +145,7 @@ function providerNotification(provider: HealthProvider): PendingNotification | n
 }
 
 function collectNotifications() {
-  const pending = captureRecords.flatMap(recordNotifications);
+  const pending = captureRecords.flatMap(record => [...recordNotifications(record), ...medicationNotifications(record)]);
   providers.forEach(provider => {
     const notification = providerNotification(provider);
     if (notification) pending.push(notification);
@@ -127,6 +173,7 @@ export function installHealthNotificationEngine() {
   installed = true;
   captureRecords = loadCaptureRecords();
   providers = loadHealthProviders();
+  adherence = loadMedicationAdherence();
 
   unsubscribeCapture = subscribeCaptureRecords(next => {
     captureRecords = next;
@@ -134,6 +181,10 @@ export function installHealthNotificationEngine() {
   });
   unsubscribeProviders = subscribeHealthProviders(next => {
     providers = next;
+    check();
+  });
+  unsubscribeAdherence = subscribeMedicationAdherence(next => {
+    adherence = next;
     check();
   });
 
@@ -144,5 +195,6 @@ export function installHealthNotificationEngine() {
     if (timer != null) window.clearInterval(timer);
     unsubscribeCapture?.();
     unsubscribeProviders?.();
+    unsubscribeAdherence?.();
   }, { once: true });
 }
