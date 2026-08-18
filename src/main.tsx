@@ -14,6 +14,7 @@ import { installHealthNotificationEngine } from './healthNotificationEngine';
 import { installMoneyModuleEnhancement } from './moneyModuleEnhancement';
 import { installHomeModuleEnhancement } from './homeModuleEnhancement';
 import { installVehicleModuleEnhancement } from './vehicleModuleEnhancement';
+import { installPetModuleEnhancement } from './petModuleEnhancement';
 import './styles.css';
 import './enhancements.css';
 import './weather.css';
@@ -29,6 +30,8 @@ import './homeModule.css';
 import './homeModuleMount.css';
 import './vehicleModule.css';
 import './vehicleModuleMount.css';
+import './petModule.css';
+import './petModuleMount.css';
 
 // Recovery-first boot: the application shell stays lightweight. No Three.js,
 // WebGL, planet textures, rover scene, city skyline, Nature or Soft scene starts here.
@@ -44,6 +47,7 @@ installHealthModuleEnhancement();
 installMoneyModuleEnhancement();
 installHomeModuleEnhancement();
 installVehicleModuleEnhancement();
+installPetModuleEnhancement();
 installHealthNotificationEngine();
 
 const rootElement = document.getElementById('root');
