@@ -92,7 +92,7 @@ function setPanelsHidden(hidden: boolean) {
   panelButton.textContent = hidden ? '▣ Show Today panels' : '◫ Hide Today panels';
   panelButton.title = hidden
     ? 'Restore the Today dashboard panels.'
-    : 'Hide the Today dashboard to view the Soft 3D dreamscape.';
+    : 'Hide the Today dashboard to view the Soft Atelier.';
 }
 
 function resetLauncher() {
@@ -103,8 +103,8 @@ function resetLauncher() {
   if (launchButton) {
     launchButton.disabled = false;
     launchButton.dataset.state = 'ready';
-    launchButton.textContent = '🌸 Launch 3D Soft';
-    launchButton.title = 'Load the animated Soft dreamscape. 3D is never started automatically.';
+    launchButton.textContent = '🌸 Launch Soft Atelier';
+    launchButton.title = 'Load the premium Soft 3D atelier. 3D is never started automatically.';
   }
   panelButton?.classList.remove('is-visible');
   if (panelButton) panelButton.setAttribute('aria-pressed', 'false');
@@ -132,7 +132,7 @@ async function launchSoft() {
   starting = true;
   launchButton.disabled = true;
   launchButton.dataset.state = 'starting';
-  launchButton.textContent = '◌ Creating dreamscape…';
+  launchButton.textContent = '◌ Preparing atelier…';
 
   try {
     if (!webGL2Available()) throw new Error('WebGL 2 is not available in this browser.');
@@ -154,17 +154,17 @@ async function launchSoft() {
 
     started = true;
     launchButton.dataset.state = 'active';
-    launchButton.textContent = '✓ Soft 3D active';
-    launchButton.title = 'Soft 3D is active. Switch themes or refresh to close it.';
+    launchButton.textContent = '✓ Soft Atelier active';
+    launchButton.title = 'Soft Atelier is active. Switch themes or refresh to close it.';
     panelButton?.classList.add('is-visible');
     setPanelsHidden(false);
   } catch (error) {
-    console.error('Family OS Soft 3D launch failed.', error);
+    console.error('Family OS Soft Atelier launch failed.', error);
     starting = false;
     launchButton.disabled = false;
     launchButton.dataset.state = 'error';
-    launchButton.textContent = '⚠ Soft 3D unavailable · retry';
-    launchButton.title = error instanceof Error ? error.message : 'Soft 3D could not start.';
+    launchButton.textContent = '⚠ Soft Atelier unavailable · retry';
+    launchButton.title = error instanceof Error ? error.message : 'Soft Atelier could not start.';
     return;
   }
 
@@ -190,8 +190,8 @@ export function installSoft3DLauncher() {
   launchButton.type = 'button';
   launchButton.className = 'family-os-soft-launcher';
   launchButton.dataset.state = 'ready';
-  launchButton.textContent = '🌸 Launch 3D Soft';
-  launchButton.title = 'Load the animated Soft dreamscape. 3D is never started automatically.';
+  launchButton.textContent = '🌸 Launch Soft Atelier';
+  launchButton.title = 'Load the premium Soft 3D atelier. 3D is never started automatically.';
   launchButton.addEventListener('click', () => void launchSoft());
 
   actions.append(panelButton, launchButton);
