@@ -12,6 +12,7 @@ import { installCalendarPlannerEnhancement } from './calendarPlannerEnhancement'
 import { installHealthModuleEnhancement } from './healthModuleEnhancement';
 import { installHealthNotificationEngine } from './healthNotificationEngine';
 import { installMoneyModuleEnhancement } from './moneyModuleEnhancement';
+import { installHomeModuleEnhancement } from './homeModuleEnhancement';
 import './styles.css';
 import './enhancements.css';
 import './weather.css';
@@ -23,6 +24,8 @@ import './healthModuleMount.css';
 import './medicationAdherence.css';
 import './moneyModule.css';
 import './moneyModuleMount.css';
+import './homeModule.css';
+import './homeModuleMount.css';
 
 // Recovery-first boot: the application shell stays lightweight. No Three.js,
 // WebGL, planet textures, rover scene, city skyline, Nature or Soft scene starts here.
@@ -36,6 +39,7 @@ installCaptureModalController();
 installCalendarPlannerEnhancement();
 installHealthModuleEnhancement();
 installMoneyModuleEnhancement();
+installHomeModuleEnhancement();
 installHealthNotificationEngine();
 
 const rootElement = document.getElementById('root');
