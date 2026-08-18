@@ -1,0 +1,4 @@
+.content > .stack[data-vehicle-enhanced="true"]{visibility:hidden;min-height:calc(100vh - 100px)}
+.vehicle-module-host{position:fixed;top:68px;left:220px;right:0;bottom:0;z-index:30;display:block;overflow:auto;padding:24px 32px 48px;box-sizing:border-box;background:#0c1017}.vehicle-module-host>.vehicle-module{width:min(1480px,100%);margin:0 auto}
+@media(max-width:1050px){.vehicle-module-host{left:76px}}
+@media(max-width:720px){.vehicle-module-host{top:60px;left:0;bottom:64px;padding:16px 12px 34px}}
