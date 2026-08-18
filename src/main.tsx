@@ -9,12 +9,16 @@ import { installNature3DLauncher } from './nature3DLauncher';
 import { installSoft3DLauncher } from './soft3DLauncher';
 import { installCaptureModalController } from './captureModalController';
 import { installCalendarPlannerEnhancement } from './calendarPlannerEnhancement';
+import { installHealthModuleEnhancement } from './healthModuleEnhancement';
+import { installHealthNotificationEngine } from './healthNotificationEngine';
 import './styles.css';
 import './enhancements.css';
 import './weather.css';
 import './captureModal.css';
 import './captureRecords.css';
 import './calendarPlanner.css';
+import './healthModule.css';
+import './healthModuleMount.css';
 
 // Recovery-first boot: the application shell stays lightweight. No Three.js,
 // WebGL, planet textures, rover scene, city skyline, Nature or Soft scene starts here.
@@ -26,6 +30,8 @@ installNature3DLauncher();
 installSoft3DLauncher();
 installCaptureModalController();
 installCalendarPlannerEnhancement();
+installHealthModuleEnhancement();
+installHealthNotificationEngine();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Family OS root element is missing.');
