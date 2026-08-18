@@ -14,6 +14,36 @@ export const CAPTURE_KINDS = [
 
 export type CaptureKind = typeof CAPTURE_KINDS[number];
 
+export const EVENT_CATEGORIES = [
+  'Family',
+  'School',
+  'Sport',
+  'Appointment',
+  'Medical',
+  'Dental',
+  'Work',
+  'Meeting',
+  'Birthday',
+  'Anniversary',
+  'Holiday',
+  'Travel',
+  'Vacation',
+  'Meal',
+  'Bill / Payment',
+  'Pet',
+  'Vehicle',
+  'Home',
+  'Social',
+  'Activity',
+  'Community',
+  'Religious',
+  'Shopping',
+  'Childcare',
+  'Other',
+] as const;
+
+export type EventCategory = typeof EVENT_CATEGORIES[number];
+
 export type CaptureRecord = {
   id: string;
   kind: CaptureKind;
@@ -122,7 +152,7 @@ export function validateCaptureValues(kind: CaptureKind, rawValues: Record<strin
       dateField(errors, values, 'date', 'Date');
       timeField(errors, values, 'time', 'Time');
       allowed(errors, values, 'person', 'Who', ['Family', 'Dad', 'Mom', 'Teen', 'Child']);
-      allowed(errors, values, 'category', 'Type', ['Family', 'School', 'Sport', 'Appointment', 'Work', 'Other']);
+      allowed(errors, values, 'category', 'Event type', EVENT_CATEGORIES);
       maxLength(errors, values, 'location', 'Location', 180);
       break;
     case 'Reminder':
@@ -313,7 +343,7 @@ export function captureRecordToCalendarEntry(record: CaptureRecord): LocalCalend
     case 'Event':
       title = v.title;
       start = dateTime(v.date, v.time);
-      category = (v.category || 'family').toLowerCase();
+      category = v.category || 'Family';
       location = v.location || undefined;
       break;
     case 'Reminder':
