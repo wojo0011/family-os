@@ -115,6 +115,10 @@ jobs:
         env:
           LIVE_URL: ${{ needs.deploy.outputs.page_url }}
         run: node scripts/live-money-smoke.mjs "$LIVE_URL"
+      - name: Exercise Home CRUD and search on live Pages site
+        env:
+          LIVE_URL: ${{ needs.deploy.outputs.page_url }}
+        run: node scripts/live-home-smoke.mjs "$LIVE_URL"
       - name: Publish live smoke status
         if: always()
         uses: actions/github-script@v7
@@ -127,6 +131,6 @@ jobs:
               sha: context.sha,
               state: passed ? 'success' : 'failure',
               context: 'live-pages-capture',
-              description: passed ? 'Live capture + calendar + health + money tests passed' : 'Live UI smoke test failed',
+              description: passed ? 'Live capture + calendar + health + money + home tests passed' : 'Live UI smoke test failed',
               target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
