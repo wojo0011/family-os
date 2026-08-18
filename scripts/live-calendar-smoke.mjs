@@ -49,39 +49,64 @@ try {
   await clickNow('[data-planner-clear]');
   await page.waitForFunction(() => document.querySelector('[data-planner-search]')?.value === '', { timeout: 5_000 });
 
-  // Click a day tile background and verify Event capture opens with that date prefilled.
+  // Click a day tile and verify Event capture opens with the date and expanded event types.
   const dayDate = await page.$eval('.planner-month-grid .planner-day:not(.is-outside)', node => node.getAttribute('data-planner-day'));
   if (!dayDate) throw new Error('Planner day did not expose a date.');
   await clickNow('.planner-month-grid .planner-day:not(.is-outside)');
   await page.waitForSelector('.capture-pro form[data-capture-form-kind="Event"]', { timeout: 10_000 });
+
   const prefilledDate = await page.$eval('.capture-pro input[name="date"]', input => input.value);
   if (prefilledDate !== dayDate) throw new Error(`Day click did not prefill selected date: expected ${dayDate}, got ${prefilledDate}`);
+
+  const eventTypes = await page.$$eval('.capture-pro select[name="category"] option', options => options.map(option => option.value));
+  const requiredTypes = ['Birthday', 'Medical', 'Travel', 'Bill / Payment', 'Pet', 'Vehicle', 'Home', 'Childcare'];
+  const missingTypes = requiredTypes.filter(type => !eventTypes.includes(type));
+  if (missingTypes.length) throw new Error(`Expanded event types missing from Add Event: ${missingTypes.join(', ')}`);
+
+  // Save a real expanded-type event and verify the category survives into Calendar.
+  const smokeTitle = `Birthday smoke ${Date.now()}`;
+  await page.type('.capture-pro input[name="title"]', smokeTitle);
+  await page.select('.capture-pro select[name="category"]', 'Birthday');
+  await clickNow('.capture-pro button[type="submit"]');
+  await page.waitForSelector('.capture-pro .capture-success', { timeout: 10_000 });
   await clickNow('.capture-pro [data-capture-close]');
   await page.waitForFunction(() => !document.querySelector('.capture-pro'), { timeout: 10_000 });
 
-  // Click a visible event and verify the detail/edit form opens.
-  await page.waitForSelector('.calendar-planner-host .planner-event', { timeout: 10_000 });
-  const eventText = await page.$eval('.calendar-planner-host .planner-event strong', node => node.textContent?.trim() || '');
-  await clickNow('.calendar-planner-host .planner-event');
-  await page.waitForSelector('.capture-pro form[data-capture-form-kind]', { timeout: 10_000 });
+  await page.waitForFunction(title => Array.from(document.querySelectorAll('.calendar-planner-host .planner-event strong')).some(node => node.textContent?.trim() === title), { timeout: 10_000 }, smokeTitle);
+  await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-planner-filter="category"] option')).some(option => option.value === 'Birthday'), { timeout: 10_000 });
+  await page.select('[data-planner-filter="category"]', 'Birthday');
+  await page.waitForFunction(title => Array.from(document.querySelectorAll('.calendar-planner-host .planner-event strong')).some(node => node.textContent?.trim() === title), { timeout: 5_000 }, smokeTitle);
+  await clickNow('[data-planner-clear]');
+
+  // Reopen the saved Birthday event and verify edit mode preserves its event type.
+  await page.evaluate(title => {
+    const eventButton = Array.from(document.querySelectorAll('.calendar-planner-host .planner-event')).find(button => button.querySelector('strong')?.textContent?.trim() === title);
+    if (!(eventButton instanceof HTMLButtonElement)) throw new Error(`Saved event not found: ${title}`);
+    eventButton.click();
+  }, smokeTitle);
+  await page.waitForSelector('.capture-pro form[data-capture-form-kind="Event"]', { timeout: 10_000 });
+
   const editState = await page.evaluate(() => {
-    const form = document.querySelector('.capture-pro form[data-capture-form-kind]');
+    const form = document.querySelector('.capture-pro form[data-capture-form-kind="Event"]');
     const heading = document.querySelector('.capture-pro .capture-form-heading .eyebrow');
     const title = document.querySelector('.capture-pro input[name="title"]');
+    const category = document.querySelector('.capture-pro select[name="category"]');
     return {
       kind: form?.getAttribute('data-capture-form-kind'),
       heading: heading?.textContent?.trim(),
       title: title instanceof HTMLInputElement ? title.value : '',
+      category: category instanceof HTMLSelectElement ? category.value : '',
       editRecordId: form?.getAttribute('data-calendar-edit-record-id'),
       originKey: form?.getAttribute('data-calendar-origin-key'),
     };
   });
-  if (!editState.kind) throw new Error(`Event click did not open an editable record form: ${JSON.stringify(editState)}`);
-  if (!editState.editRecordId && !editState.originKey) throw new Error(`Event click opened a plain add form instead of edit mode: ${JSON.stringify(editState)}`);
-  if (editState.kind === 'Event' && eventText && !editState.title) throw new Error('Event edit form did not preload title.');
+
+  if (editState.kind !== 'Event' || !editState.editRecordId) throw new Error(`Saved local event did not open in edit mode: ${JSON.stringify(editState)}`);
+  if (editState.title !== smokeTitle) throw new Error(`Saved event title was not preserved: ${JSON.stringify(editState)}`);
+  if (editState.category !== 'Birthday') throw new Error(`Expanded event type was not preserved for editing: ${JSON.stringify(editState)}`);
 
   if (errors.length) throw new Error(`Browser errors during live calendar test:\n${errors.join('\n')}`);
-  console.log('LIVE_CALENDAR_SMOKE_PASS', JSON.stringify({ url: siteUrl, dayDate, eventText, editState }));
+  console.log('LIVE_CALENDAR_SMOKE_PASS', JSON.stringify({ url: siteUrl, dayDate, eventTypes: eventTypes.length, smokeTitle, editState }));
 } finally {
   await browser.close();
 }
