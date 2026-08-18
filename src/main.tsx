@@ -8,6 +8,7 @@ import { installMidnight3DLauncher } from './midnight3DLauncher';
 import { installNature3DLauncher } from './nature3DLauncher';
 import { installSoft3DLauncher } from './soft3DLauncher';
 import { installCaptureModalController } from './captureModalController';
+import { installCaptureModalInteractionFix } from './captureModalInteractionFix';
 import './styles.css';
 import './enhancements.css';
 import './weather.css';
@@ -23,6 +24,7 @@ installMidnight3DLauncher();
 installNature3DLauncher();
 installSoft3DLauncher();
 installCaptureModalController();
+installCaptureModalInteractionFix();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Family OS root element is missing.');
