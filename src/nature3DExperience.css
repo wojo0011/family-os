@@ -1,0 +1,101 @@
+:root[data-nature3d="active"] .content:has(> .stack > .hero-grid) {
+  position: relative;
+  max-width: none;
+  width: 100%;
+  min-height: calc(100vh - 68px);
+  margin: 0;
+  overflow: visible;
+  isolation: isolate;
+}
+
+:root[data-nature3d="active"] .content:has(> .stack > .hero-grid) > .stack {
+  position: relative;
+  z-index: 4;
+  width: min(1480px, 100%);
+  margin-inline: auto;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.nature-3d-layer {
+  position: fixed;
+  top: 68px;
+  left: 220px;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  background:
+    radial-gradient(circle at 20% 14%, rgba(255,244,190,.38), transparent 18%),
+    radial-gradient(circle at 72% 48%, rgba(123,205,175,.18), transparent 24%),
+    linear-gradient(180deg, #b9d9c4 0%, #8fc2aa 27%, #47785d 58%, #1e3d2a 100%);
+}
+
+.nature-3d-layer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 22%, rgba(255,255,255,.18) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 35% 16%, rgba(255,255,255,.13) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 68% 31%, rgba(255,255,255,.11) 0 1px, transparent 1.8px),
+    linear-gradient(180deg, rgba(255,255,255,.04), transparent 40%);
+  background-size: 190px 190px, 260px 260px, 330px 330px, auto;
+  opacity: .58;
+}
+
+.nature-3d-layer::after {
+  content: "";
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  bottom: -4%;
+  height: 36%;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 55% 100%, rgba(12,42,27,.58), transparent 56%),
+    linear-gradient(180deg, transparent, rgba(11,34,22,.26) 52%, rgba(8,25,17,.62));
+}
+
+.nature-3d-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+:root[data-nature-panels-hidden="true"] .content:has(> .stack > .hero-grid) > .stack {
+  opacity: 0;
+  transform: translateY(10px) scale(.992);
+  pointer-events: none;
+}
+
+@media (max-width: 1050px) {
+  .nature-3d-layer {
+    left: 76px;
+  }
+}
+
+@media (max-width: 720px) {
+  :root[data-nature3d="active"] .content:has(> .stack > .hero-grid) {
+    min-height: calc(100vh - 124px);
+  }
+
+  .nature-3d-layer {
+    top: 60px;
+    left: 0;
+    bottom: 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-nature3d="active"] .content:has(> .stack > .hero-grid) > .stack {
+    transition: none;
+  }
+}
