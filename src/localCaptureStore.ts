@@ -1,6 +1,7 @@
 export const CAPTURE_KINDS = [
   'Event',
   'Reminder',
+  'Bill',
   'Expense',
   'Scan receipt',
   'Medication',
@@ -41,6 +42,33 @@ export const EVENT_CATEGORIES = [
   'Childcare',
   'Other',
 ] as const;
+
+export const MONEY_CATEGORIES = [
+  'Housing',
+  'Utilities',
+  'Groceries',
+  'Dining',
+  'Transportation',
+  'Vehicle',
+  'Insurance',
+  'Health',
+  'Kids',
+  'Pets',
+  'Education',
+  'Entertainment',
+  'Subscriptions',
+  'Debt',
+  'Taxes',
+  'Travel',
+  'Shopping',
+  'Home',
+  'Gifts',
+  'Other',
+] as const;
+
+export const BILL_STATUSES = ['Unpaid', 'Paid'] as const;
+export const BILL_RECURRENCES = ['One-time', 'Weekly', 'Biweekly', 'Monthly', 'Every 2 months', 'Quarterly', 'Every 6 months', 'Yearly'] as const;
+export const PAYMENT_METHODS = ['Cash', 'Debit', 'Credit', 'Bank transfer', 'Pre-authorized', 'Gift card', 'Other'] as const;
 
 export type EventCategory = typeof EVENT_CATEGORIES[number];
 
@@ -142,6 +170,11 @@ function allowed(errors: Record<string, string>, values: Record<string, string>,
   if (!choices.includes(value)) errors[field] = `Choose a valid ${label.toLowerCase()}.`;
 }
 
+function allowedOptional(errors: Record<string, string>, values: Record<string, string>, field: string, label: string, choices: readonly string[]) {
+  const value = values[field] ?? '';
+  if (value && !choices.includes(value)) errors[field] = `Choose a valid ${label.toLowerCase()}.`;
+}
+
 export function validateCaptureValues(kind: CaptureKind, rawValues: Record<string, string>): CaptureValidationResult {
   const values = normalizeCaptureValues(rawValues);
   const errors: Record<string, string> = {};
@@ -162,17 +195,39 @@ export function validateCaptureValues(kind: CaptureKind, rawValues: Record<strin
       allowed(errors, values, 'person', 'Who', ['Family', 'Dad', 'Mom', 'Teen', 'Child']);
       allowed(errors, values, 'priority', 'Priority', ['Normal', 'Important', 'Urgent']);
       break;
+    case 'Bill':
+      required(errors, values, 'bill', 'Bill', 2);
+      nonNegativeNumber(errors, values, 'amount', 'Amount', { required: true, positive: true, max: 10_000_000 });
+      dateField(errors, values, 'dueDate', 'Due date');
+      dateField(errors, values, 'paidDate', 'Paid date', true);
+      allowed(errors, values, 'status', 'Status', BILL_STATUSES);
+      allowed(errors, values, 'category', 'Category', MONEY_CATEGORIES);
+      allowed(errors, values, 'recurrence', 'Recurrence', BILL_RECURRENCES);
+      allowed(errors, values, 'person', 'Responsible person', ['Family', 'Dad', 'Mom', 'Teen']);
+      allowed(errors, values, 'autopay', 'Autopay', ['No', 'Yes']);
+      maxLength(errors, values, 'account', 'Account / reference', 160);
+      break;
     case 'Expense':
       required(errors, values, 'merchant', 'Merchant / description', 2);
       nonNegativeNumber(errors, values, 'amount', 'Amount', { required: true, positive: true, max: 10_000_000 });
+      nonNegativeNumber(errors, values, 'tax', 'Tax', { max: 10_000_000 });
       dateField(errors, values, 'date', 'Date');
       allowed(errors, values, 'person', 'Paid by', ['Family', 'Dad', 'Mom', 'Teen']);
+      allowedOptional(errors, values, 'category', 'Category', MONEY_CATEGORIES);
+      allowedOptional(errors, values, 'paymentMethod', 'Payment method', PAYMENT_METHODS);
       break;
     case 'Scan receipt':
       required(errors, values, 'merchant', 'Merchant', 2);
       nonNegativeNumber(errors, values, 'amount', 'Total', { positive: true, max: 10_000_000 });
+      nonNegativeNumber(errors, values, 'subtotal', 'Subtotal', { max: 10_000_000 });
+      nonNegativeNumber(errors, values, 'tax', 'Tax', { max: 10_000_000 });
+      nonNegativeNumber(errors, values, 'tip', 'Tip', { max: 10_000_000 });
       dateField(errors, values, 'date', 'Date', true);
+      allowedOptional(errors, values, 'category', 'Category', MONEY_CATEGORIES);
+      allowedOptional(errors, values, 'person', 'Paid by', ['Family', 'Dad', 'Mom', 'Teen']);
+      allowedOptional(errors, values, 'paymentMethod', 'Payment method', PAYMENT_METHODS);
       maxLength(errors, values, 'receipt', 'Receipt file name', 260);
+      maxLength(errors, values, 'linkedBillId', 'Linked bill', 180);
       break;
     case 'Medication':
       required(errors, values, 'medication', 'Medication', 2);
@@ -221,7 +276,7 @@ export function validateCaptureValues(kind: CaptureKind, rawValues: Record<strin
       break;
   }
 
-  const commonTextFields = ['title', 'merchant', 'medication', 'directions', 'value', 'pet', 'vehicle', 'task', 'provider'];
+  const commonTextFields = ['title', 'bill', 'merchant', 'medication', 'directions', 'value', 'pet', 'vehicle', 'task', 'provider'];
   commonTextFields.forEach(field => maxLength(errors, values, field, field, 220));
   maxLength(errors, values, 'notes', 'Notes', 4000);
   maxLength(errors, values, 'transcript', 'Quick capture', 4000);
@@ -351,6 +406,11 @@ export function captureRecordToCalendarEntry(record: CaptureRecord): LocalCalend
       start = dateTime(v.date, v.time);
       category = 'reminder';
       break;
+    case 'Bill':
+      title = `${v.status === 'Paid' ? 'Paid' : 'Bill due'} · ${v.bill}${v.amount ? ` · $${Number(v.amount).toFixed(2)}` : ''}`;
+      start = dateTime(v.dueDate, '09:00');
+      category = 'money';
+      break;
     case 'Medication':
       title = `${v.medication}${v.directions ? ` · ${v.directions}` : ''}`;
       start = dateTime(v.startDate, v.time);
@@ -405,6 +465,7 @@ export function captureRecordSummary(record: CaptureRecord) {
   switch (record.kind) {
     case 'Event': return v.title || 'Event';
     case 'Reminder': return v.title || 'Reminder';
+    case 'Bill': return `${v.bill || 'Bill'}${v.amount ? ` · $${Number(v.amount).toFixed(2)}` : ''}${v.status ? ` · ${v.status}` : ''}`;
     case 'Expense': return `${v.merchant || 'Expense'}${v.amount ? ` · $${Number(v.amount).toFixed(2)}` : ''}`;
     case 'Scan receipt': return `${v.merchant || 'Receipt'}${v.amount ? ` · $${Number(v.amount).toFixed(2)}` : ''}`;
     case 'Medication': return v.medication || 'Medication';
@@ -418,7 +479,7 @@ export function captureRecordSummary(record: CaptureRecord) {
 }
 
 export function captureRecordDateLabel(record: CaptureRecord) {
-  const raw = record.values.date || record.values.startDate || record.createdAt.slice(0, 10);
+  const raw = record.values.date || record.values.dueDate || record.values.startDate || record.createdAt.slice(0, 10);
   const parsed = isValidDate(raw) ? new Date(`${raw}T12:00:00`) : new Date(record.createdAt);
   return Number.isNaN(parsed.getTime()) ? '' : new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }).format(parsed);
 }
