@@ -112,8 +112,10 @@ function resetLauncher() {
 
 function syncVisibility() {
   if (!actions) return;
-  const visible = document.documentElement.dataset.theme === 'soft' && Boolean(findTodayHost());
+  const isSoft = document.documentElement.dataset.theme === 'soft';
+  const visible = isSoft && Boolean(findTodayHost());
   actions.classList.toggle('is-visible', visible);
+  if (!isSoft && (started || starting || panelsHidden)) resetLauncher();
 }
 
 function queueSync() {
@@ -139,7 +141,16 @@ async function launchSoft() {
 
     await import('./soft3DExperience.css');
     const { launchSoft3DExperience } = await import('./soft3DExperience');
+    if (document.documentElement.dataset.theme !== 'soft' || !findTodayHost()) {
+      resetLauncher();
+      return;
+    }
     await launchSoft3DExperience();
+
+    if (document.documentElement.dataset.theme !== 'soft') {
+      resetLauncher();
+      return;
+    }
 
     started = true;
     launchButton.dataset.state = 'active';
