@@ -30,6 +30,17 @@ try {
     element.dispatchEvent(new Event('change', { bubbles: true }));
   }, { selector, value });
 
+  const setProfileField = (label, value) => page.evaluate(({ label: wantedLabel, value: currentValue }) => {
+    const labels = Array.from(document.querySelectorAll('[data-pet-modal] .pet-form-grid label'));
+    const wrapper = labels.find(item => item.querySelector(':scope > span')?.textContent?.trim() === wantedLabel);
+    const element = wrapper?.querySelector('input, textarea, select');
+    if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) throw new Error(`Pet profile field not found: ${wantedLabel}`);
+    const proto = element instanceof HTMLSelectElement ? HTMLSelectElement.prototype : element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, 'value')?.set?.call(element, currentValue);
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  }, { label, value });
+
   const today = await page.evaluate(() => {
     const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   });
@@ -55,16 +66,16 @@ try {
   await page.waitForSelector('.pet-module-host .pet-module', { timeout: 15_000 });
 
   await clickNow('[data-pet-add]');
-  await page.waitForSelector('[data-pet-modal] input[name="name"]');
-  await setValueNow('[data-pet-modal] input[name="name"]', 'Live Max');
-  await setValueNow('[data-pet-modal] select', 'Dog');
-  const controls = {
-    breed: 'Labrador Retriever', birthday: '2021-05-10', adoptionDate: '2021-07-01', color: 'Black', weight: '31.4', microchip: 'MICROCHIP-LIVE-7788', license: 'DOG-LIVE-22', vetName: 'Live Animal Hospital', vetPhone: '905-555-0100', insuranceProvider: 'Live Pet Insurance', insurancePolicy: 'PET-12345', insuranceExpiry: nextYear, allergies: 'Chicken', conditions: 'Seasonal allergies', notes: 'Friendly family dog'
-  };
-  for (const [name, value] of Object.entries(controls)) await setValueNow(`[data-pet-modal] [name="${name}"]`, value);
-  await page.evaluate(() => {
-    const save = document.querySelector('[data-pet-save]'); if (!(save instanceof HTMLButtonElement)) throw new Error('Save pet button missing.'); save.click();
-  });
+  await page.waitForSelector('[data-pet-modal]');
+  const profileValues = [
+    ['Name', 'Live Max'], ['Species', 'Dog'], ['Breed', 'Labrador Retriever'], ['Status', 'Active'], ['Sex', 'Male'], ['Family member', 'Family'],
+    ['Birthday', '2021-05-10'], ['Adoption date', '2021-07-01'], ['Colour / markings', 'Black'], ['Weight (kg)', '31.4'],
+    ['Microchip', 'MICROCHIP-LIVE-7788'], ['Licence / tag', 'DOG-LIVE-22'], ['Veterinarian', 'Live Animal Hospital'], ['Vet phone', '905-555-0100'],
+    ['Insurance provider', 'Live Pet Insurance'], ['Policy', 'PET-12345'], ['Insurance expiry', nextYear], ['Allergies', 'Chicken'],
+    ['Conditions', 'Seasonal allergies'], ['Notes', 'Friendly family dog'],
+  ];
+  for (const [label, value] of profileValues) await setProfileField(label, value);
+  await clickNow('[data-pet-save]');
   await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-pet-card] h3')).some(node => node.textContent?.includes('Live Max')), { timeout: 10_000 });
 
   await setValueNow('[data-pet-search]', 'MICROCHIP-LIVE-7788');
@@ -76,15 +87,10 @@ try {
     const edit = Array.from(card?.querySelectorAll('button') || []).find(button => button.textContent?.trim() === 'Edit profile');
     if (!(edit instanceof HTMLButtonElement)) throw new Error('Pet edit button missing.'); edit.click();
   });
-  await page.waitForSelector('[data-pet-modal] input[name="name"]');
-  await setValueNow('[data-pet-modal] input[name="name"]', 'Max Family Dog');
-  await setValueNow('[data-pet-modal] select:nth-of-type(2)', 'Needs care').catch(() => undefined);
-  await page.evaluate(() => {
-    const selects = document.querySelectorAll('[data-pet-modal] select');
-    const status = selects[1];
-    if (status instanceof HTMLSelectElement) { status.value = 'Needs care'; status.dispatchEvent(new Event('change', { bubbles: true })); }
-    const save = document.querySelector('[data-pet-save]'); if (!(save instanceof HTMLButtonElement)) throw new Error('Pet save changes button missing.'); save.click();
-  });
+  await page.waitForSelector('[data-pet-modal]');
+  await setProfileField('Name', 'Max Family Dog');
+  await setProfileField('Status', 'Needs care');
+  await clickNow('[data-pet-save]');
   await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-pet-card] h3')).some(node => node.textContent?.includes('Max Family Dog')));
 
   await page.evaluate(() => {
