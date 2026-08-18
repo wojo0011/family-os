@@ -14,8 +14,8 @@ interface SpeechRecognitionLike {
   start(): void;
   stop(): void;
   onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onend: ((event?: Event) => void) | null;
+  onerror: ((event?: Event) => void) | null;
 }
 
 interface Window {
