@@ -112,8 +112,10 @@ function resetLauncher() {
 
 function syncVisibility() {
   if (!actions) return;
-  const visible = document.documentElement.dataset.theme === 'nature' && Boolean(findTodayHost());
+  const isNature = document.documentElement.dataset.theme === 'nature';
+  const visible = isNature && Boolean(findTodayHost());
   actions.classList.toggle('is-visible', visible);
+  if (!isNature && (started || starting || panelsHidden)) resetLauncher();
 }
 
 function queueSync() {
@@ -139,7 +141,16 @@ async function launchNature() {
 
     await import('./nature3DExperience.css');
     const { launchNature3DExperience } = await import('./nature3DExperience');
+    if (document.documentElement.dataset.theme !== 'nature' || !findTodayHost()) {
+      resetLauncher();
+      return;
+    }
     await launchNature3DExperience();
+
+    if (document.documentElement.dataset.theme !== 'nature') {
+      resetLauncher();
+      return;
+    }
 
     started = true;
     launchButton.dataset.state = 'active';
