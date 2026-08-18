@@ -22,6 +22,19 @@ type CaptureDefinition = {
   accent: string;
 };
 
+type FieldDefinition = {
+  label: string;
+  name: string;
+  type?: 'text' | 'number' | 'date' | 'time' | 'textarea' | 'select' | 'file';
+  required?: boolean;
+  placeholder?: string;
+  options?: string[];
+  step?: string;
+  min?: string;
+  defaultValue?: 'today' | 'nextHour';
+  wide?: boolean;
+};
+
 const MOTION_URL = 'https://cdn.jsdelivr.net/npm/motion@11.11.13/+esm';
 
 const captures: CaptureDefinition[] = [
@@ -38,6 +51,94 @@ const captures: CaptureDefinition[] = [
   { kind: 'Speak', icon: '🎙', description: 'Dictate or type a quick family note', accent: '#cdb3ff' },
 ];
 
+const personOptions = ['Family', 'Dad', 'Mom', 'Teen', 'Child'];
+
+const schemas: Record<CaptureKind, FieldDefinition[]> = {
+  Event: [
+    { label: 'Event title', name: 'title', required: true, placeholder: 'Family dinner' },
+    { label: 'Who', name: 'person', type: 'select', options: personOptions },
+    { label: 'Date', name: 'date', type: 'date', required: true, defaultValue: 'today' },
+    { label: 'Time', name: 'time', type: 'time', required: true, defaultValue: 'nextHour' },
+    { label: 'Location', name: 'location', placeholder: 'Optional location' },
+    { label: 'Type', name: 'category', type: 'select', options: ['Family', 'School', 'Sport', 'Appointment', 'Work', 'Other'] },
+    { label: 'Notes', name: 'notes', type: 'textarea', placeholder: 'Anything the family should know…', wide: true },
+  ],
+  Reminder: [
+    { label: 'Reminder', name: 'title', required: true, placeholder: 'Call the dentist' },
+    { label: 'Who', name: 'person', type: 'select', options: personOptions },
+    { label: 'Due date', name: 'date', type: 'date', required: true, defaultValue: 'today' },
+    { label: 'Due time', name: 'time', type: 'time', defaultValue: 'nextHour' },
+    { label: 'Priority', name: 'priority', type: 'select', options: ['Normal', 'Important', 'Urgent'] },
+    { label: 'Notes', name: 'notes', type: 'textarea', placeholder: 'Optional context…', wide: true },
+  ],
+  Expense: [
+    { label: 'Merchant / description', name: 'merchant', required: true, placeholder: 'Groceries' },
+    { label: 'Amount', name: 'amount', type: 'number', required: true, placeholder: '0.00', step: '0.01', min: '0.01' },
+    { label: 'Category', name: 'category', type: 'select', options: ['Groceries', 'Dining', 'Home', 'Vehicle', 'Health', 'Kids', 'Pets', 'Entertainment', 'Other'] },
+    { label: 'Date', name: 'date', type: 'date', required: true, defaultValue: 'today' },
+    { label: 'Paid by', name: 'person', type: 'select', options: ['Family', 'Dad', 'Mom', 'Teen'] },
+    { label: 'Notes', name: 'notes', type: 'textarea', placeholder: 'Optional expense note…', wide: true },
+  ],
+  'Scan receipt': [
+    { label: 'Receipt image', name: 'receipt', type: 'file', wide: true },
+    { label: 'Merchant', name: 'merchant', required: true, placeholder: 'Store name' },
+    { label: 'Total', name: 'amount', type: 'number', placeholder: '0.00', step: '0.01', min: '0.01' },
+    { label: 'Date', name: 'date', type: 'date', defaultValue: 'today' },
+    { label: 'Category', name: 'category', type: 'select', options: ['Groceries', 'Dining', 'Home', 'Vehicle', 'Health', 'Kids', 'Pets', 'Other'] },
+    { label: 'Notes', name: 'notes', type: 'textarea', placeholder: 'Add a note before saving…', wide: true },
+  ],
+  Medication: [
+    { label: 'Medication', name: 'medication', required: true, placeholder: 'Medication name' },
+    { label: 'Directions', name: 'directions', required: true, placeholder: '1 tablet with food' },
+    { label: 'Start date', name: 'startDate', type: 'date', required: true, defaultValue: 'today' },
+    { label: 'Schedule time', name: 'time', type: 'time', defaultValue: 'nextHour' },
+    { label: 'End date', name: 'endDate', type: 'date' },
+    { label: 'For', name: 'person', type: 'select', options: ['Dad', 'Mom', 'Teen', 'Child', 'Family'] },
+    { label: 'Notes', name: 'notes', type: 'textarea', placeholder: 'Prescription label details or instructions…', wide: true },
+  ],
+  'Health entry': [
+    { label: 'Entry type', name: 'entryType', type: 'select', options: ['Temperature', 'Symptom', 'Blood pressure', 'Heart rate', 'Weight', 'Doctor note', 'Other'] },
+    { label: 'Reading / value', name: 'value', required: true, placeholder: 'e.g. 38.1 °C' },
+    { label: 'For', name: 'person', type: 'select', options: ['Dad', 'Mom', 'Teen', 'Child'] },
+    { label: 'Date', name: 'date', type: 'date', required: true, defaultValue: 'today' },
+    { label: 'Time', name: 'time', type: 'time', required: true, defaultValue: 'nextHour' },
+    { label: 'Notes', name: 'notes', type: 'textarea', placeholder: 'Symptoms, context, medication taken, hydration, etc.', wide: true },
+  ],
+  Milestone: [
+    { label: 'Milestone', name: 'title', required: true, placeholder: 'First day of school' },
+    { label: 'Who', name: 'person', type: 'select', options: personOptions },
+    { label: 'Type', name: 'milestoneType', type: 'select', options: ['Birthday', 'First', 'Graduation', 'Anniversary', 'Achievement', 'Memory', 'Other'] },
+    { label: 'Date', name: 'date', type: 'date', required: true, defaultValue: 'today' },
+    { label: 'Memory / notes', name: 'notes', type: 'textarea', placeholder: 'What made this moment special?', wide: true },
+  ],
+  'Pet record': [
+    { label: 'Pet name', name: 'pet', required: true, placeholder: 'Max' },
+    { label: 'Record type', name: 'recordType', type: 'select', options: ['Vet appointment', 'Vaccination', 'Medication', 'Grooming', 'Weight', 'Birthday', 'Adoption day', 'Note'] },
+    { label: 'Date', name: 'date', type: 'date', required: true, defaultValue: 'today' },
+    { label: 'Provider / place', name: 'provider', placeholder: 'Optional' },
+    { label: 'Details', name: 'notes', type: 'textarea', placeholder: 'Treatment, dosage, result, reminder, etc.', wide: true },
+  ],
+  'Vehicle update': [
+    { label: 'Vehicle', name: 'vehicle', required: true, placeholder: '2015 Volkswagen Jetta TDI' },
+    { label: 'Update type', name: 'updateType', type: 'select', options: ['Mileage', 'Service', 'Repair', 'Fuel', 'Insurance', 'Registration', 'Tire change', 'Other'] },
+    { label: 'Odometer (km)', name: 'odometer', type: 'number', placeholder: 'Current mileage', min: '0' },
+    { label: 'Date', name: 'date', type: 'date', required: true, defaultValue: 'today' },
+    { label: 'Cost', name: 'cost', type: 'number', placeholder: '0.00', step: '0.01', min: '0' },
+    { label: 'Details', name: 'notes', type: 'textarea', placeholder: 'Work completed, parts, shop, next service, etc.', wide: true },
+  ],
+  'Home maintenance': [
+    { label: 'Task', name: 'task', required: true, placeholder: 'Change furnace filter' },
+    { label: 'Area', name: 'area', type: 'select', options: ['Whole home', 'HVAC', 'Kitchen', 'Bathroom', 'Exterior', 'Safety', 'Appliance', 'Yard', 'Other'] },
+    { label: 'Due / completed date', name: 'date', type: 'date', required: true, defaultValue: 'today' },
+    { label: 'Repeat', name: 'repeat', type: 'select', options: ['No repeat', 'Monthly', 'Every 3 months', 'Every 6 months', 'Yearly', 'Custom'] },
+    { label: 'Details', name: 'notes', type: 'textarea', placeholder: 'Model, filter size, contractor, parts, notes…', wide: true },
+  ],
+  Speak: [
+    { label: 'Quick capture', name: 'transcript', type: 'textarea', required: true, placeholder: 'Speak or type what you want Family OS to remember…', wide: true },
+    { label: 'Save as', name: 'saveAs', type: 'select', options: ['Quick note', 'Reminder', 'Event idea', 'Health note', 'Home note', 'Vehicle note'] },
+  ],
+};
+
 let installed = false;
 let activeHost: HTMLDivElement | null = null;
 let activeOverlay: HTMLElement | null = null;
@@ -45,6 +146,26 @@ let previousFocus: HTMLElement | null = null;
 let motionPromise: Promise<MotionModule | null> | null = null;
 let closing = false;
 let transitioning = false;
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>'"]/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
+  }[char] ?? char));
+}
+
+function todayValue() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function nextHourValue() {
+  const date = new Date(Date.now() + 60 * 60 * 1000);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function definitionFor(kind: CaptureKind) {
+  return captures.find(item => item.kind === kind) ?? captures[0];
+}
 
 function loadMotion() {
   if (!motionPromise) {
@@ -58,11 +179,7 @@ function loadMotion() {
   return motionPromise;
 }
 
-async function animateElement(
-  target: Element | null,
-  keyframes: Record<string, unknown>,
-  options: Record<string, unknown>,
-) {
+async function animateElement(target: Element | null, keyframes: Record<string, unknown>, options: Record<string, unknown>) {
   if (!target) return;
   const motion = await loadMotion();
   if (motion?.animate) {
@@ -72,220 +189,93 @@ async function animateElement(
   }
 
   const element = target as HTMLElement;
-  const durationSeconds = typeof options.duration === 'number' ? options.duration : 0.24;
-  const keys = Object.keys(keyframes);
-  const maxLength = Math.max(...keys.map(key => Array.isArray(keyframes[key]) ? (keyframes[key] as unknown[]).length : 1));
-  const frames: Keyframe[] = [];
-
-  for (let index = 0; index < maxLength; index += 1) {
-    const frame: Record<string, unknown> = {};
-    keys.forEach(key => {
-      const value = keyframes[key];
-      frame[key] = Array.isArray(value) ? value[Math.min(index, value.length - 1)] : value;
-    });
-    frames.push(frame as Keyframe);
-  }
-
-  const animation = element.animate(frames, {
-    duration: durationSeconds * 1000,
+  const duration = (typeof options.duration === 'number' ? options.duration : 0.24) * 1000;
+  const opacity = keyframes.opacity;
+  const opacityFrames = Array.isArray(opacity) ? opacity : opacity == null ? undefined : [opacity];
+  const animation = element.animate(opacityFrames ? { opacity: opacityFrames as number[] } : [{ opacity: 1 }, { opacity: 1 }], {
+    duration,
     easing: 'cubic-bezier(.22,1,.36,1)',
     fill: 'forwards',
   });
   await animation.finished.catch(() => undefined);
 }
 
-function escapeHtml(value: string) {
-  return value.replace(/[&<>'"]/g, char => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
-  }[char] ?? char));
+function fieldValue(field: FieldDefinition) {
+  if (field.defaultValue === 'today') return todayValue();
+  if (field.defaultValue === 'nextHour') return nextHourValue();
+  return '';
 }
 
-function todayValue() {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
+function renderField(field: FieldDefinition) {
+  const type = field.type ?? 'text';
+  const classes = ['capture-field'];
+  if (field.wide || type === 'textarea' || type === 'file') classes.push('capture-field-wide');
+  if (type === 'file') classes.push('capture-file');
+  const wrapper = `${classes.join(' ')}" data-capture-field="${escapeHtml(field.name)}`;
+  const required = field.required ? ' required' : '';
+  const value = fieldValue(field);
 
-function timeValue() {
-  const date = new Date(Date.now() + 60 * 60 * 1000);
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-}
-
-function field(
-  label: string,
-  name: string,
-  type = 'text',
-  options: { required?: boolean; placeholder?: string; value?: string; step?: string; min?: string; max?: string } = {},
-) {
-  return `<label class="capture-field" data-capture-field="${name}"><span>${label}</span><input name="${name}" type="${type}" ${options.required ? 'required' : ''} ${options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : ''} ${options.value ? `value="${escapeHtml(options.value)}"` : ''} ${options.step ? `step="${options.step}"` : ''} ${options.min ? `min="${options.min}"` : ''} ${options.max ? `max="${options.max}"` : ''}></label>`;
-}
-
-function selectField(label: string, name: string, options: string[]) {
-  return `<label class="capture-field" data-capture-field="${name}"><span>${label}</span><select name="${name}">${options.map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('')}</select></label>`;
-}
-
-function textArea(label: string, name: string, placeholder: string, required = false) {
-  return `<label class="capture-field capture-field-wide" data-capture-field="${name}"><span>${label}</span><textarea name="${name}" rows="4" ${required ? 'required' : ''} placeholder="${escapeHtml(placeholder)}"></textarea></label>`;
-}
-
-function formFields(kind: CaptureKind) {
-  const date = todayValue();
-  const time = timeValue();
-
-  switch (kind) {
-    case 'Event':
-      return [
-        field('Event title', 'title', 'text', { required: true, placeholder: 'Family dinner' }),
-        selectField('Who', 'person', ['Family', 'Dad', 'Mom', 'Teen', 'Child']),
-        field('Date', 'date', 'date', { required: true, value: date }),
-        field('Time', 'time', 'time', { required: true, value: time }),
-        field('Location', 'location', 'text', { placeholder: 'Optional location' }),
-        selectField('Type', 'category', ['Family', 'School', 'Sport', 'Appointment', 'Work', 'Other']),
-        textArea('Notes', 'notes', 'Anything the family should know…'),
-      ].join('');
-    case 'Reminder':
-      return [
-        field('Reminder', 'title', 'text', { required: true, placeholder: 'Call the dentist' }),
-        selectField('Who', 'person', ['Family', 'Dad', 'Mom', 'Teen', 'Child']),
-        field('Due date', 'date', 'date', { required: true, value: date }),
-        field('Due time', 'time', 'time', { value: time }),
-        selectField('Priority', 'priority', ['Normal', 'Important', 'Urgent']),
-        textArea('Notes', 'notes', 'Optional context…'),
-      ].join('');
-    case 'Expense':
-      return [
-        field('Merchant / description', 'merchant', 'text', { required: true, placeholder: 'Groceries' }),
-        field('Amount', 'amount', 'number', { required: true, placeholder: '0.00', step: '0.01', min: '0.01' }),
-        selectField('Category', 'category', ['Groceries', 'Dining', 'Home', 'Vehicle', 'Health', 'Kids', 'Pets', 'Entertainment', 'Other']),
-        field('Date', 'date', 'date', { required: true, value: date }),
-        selectField('Paid by', 'person', ['Family', 'Dad', 'Mom', 'Teen']),
-        textArea('Notes', 'notes', 'Optional expense note…'),
-      ].join('');
-    case 'Scan receipt':
-      return [
-        `<label class="capture-field capture-field-wide capture-file" data-capture-field="receipt"><span>Receipt image</span><input name="receipt" type="file" accept="image/*,application/pdf"><small>The file itself stays on this device; only its name and confirmed record details are stored for now.</small></label>`,
-        field('Merchant', 'merchant', 'text', { required: true, placeholder: 'Store name' }),
-        field('Total', 'amount', 'number', { placeholder: '0.00', step: '0.01', min: '0.01' }),
-        field('Date', 'date', 'date', { value: date }),
-        selectField('Category', 'category', ['Groceries', 'Dining', 'Home', 'Vehicle', 'Health', 'Kids', 'Pets', 'Other']),
-        textArea('Notes', 'notes', 'Add a note before saving…'),
-      ].join('');
-    case 'Medication':
-      return [
-        field('Medication', 'medication', 'text', { required: true, placeholder: 'Medication name' }),
-        field('Directions', 'directions', 'text', { required: true, placeholder: '1 tablet with food' }),
-        field('Start date', 'startDate', 'date', { required: true, value: date }),
-        field('Schedule time', 'time', 'time', { value: time }),
-        field('End date', 'endDate', 'date'),
-        selectField('For', 'person', ['Dad', 'Mom', 'Teen', 'Child', 'Family']),
-        textArea('Notes', 'notes', 'Prescription label details or instructions…'),
-      ].join('');
-    case 'Health entry':
-      return [
-        selectField('Entry type', 'entryType', ['Temperature', 'Symptom', 'Blood pressure', 'Heart rate', 'Weight', 'Doctor note', 'Other']),
-        field('Reading / value', 'value', 'text', { required: true, placeholder: 'e.g. 38.1 °C' }),
-        selectField('For', 'person', ['Dad', 'Mom', 'Teen', 'Child']),
-        field('Date', 'date', 'date', { required: true, value: date }),
-        field('Time', 'time', 'time', { required: true, value: time }),
-        textArea('Notes', 'notes', 'Symptoms, context, medication taken, hydration, etc.'),
-      ].join('');
-    case 'Milestone':
-      return [
-        field('Milestone', 'title', 'text', { required: true, placeholder: 'First day of school' }),
-        selectField('Who', 'person', ['Family', 'Dad', 'Mom', 'Teen', 'Child']),
-        selectField('Type', 'milestoneType', ['Birthday', 'First', 'Graduation', 'Anniversary', 'Achievement', 'Memory', 'Other']),
-        field('Date', 'date', 'date', { required: true, value: date }),
-        textArea('Memory / notes', 'notes', 'What made this moment special?'),
-      ].join('');
-    case 'Pet record':
-      return [
-        field('Pet name', 'pet', 'text', { required: true, placeholder: 'Max' }),
-        selectField('Record type', 'recordType', ['Vet appointment', 'Vaccination', 'Medication', 'Grooming', 'Weight', 'Birthday', 'Adoption day', 'Note']),
-        field('Date', 'date', 'date', { required: true, value: date }),
-        field('Provider / place', 'provider', 'text', { placeholder: 'Optional' }),
-        textArea('Details', 'notes', 'Treatment, dosage, result, reminder, etc.'),
-      ].join('');
-    case 'Vehicle update':
-      return [
-        field('Vehicle', 'vehicle', 'text', { required: true, placeholder: '2015 Volkswagen Jetta TDI' }),
-        selectField('Update type', 'updateType', ['Mileage', 'Service', 'Repair', 'Fuel', 'Insurance', 'Registration', 'Tire change', 'Other']),
-        field('Odometer (km)', 'odometer', 'number', { placeholder: 'Current mileage', min: '0' }),
-        field('Date', 'date', 'date', { required: true, value: date }),
-        field('Cost', 'cost', 'number', { placeholder: '0.00', step: '0.01', min: '0' }),
-        textArea('Details', 'notes', 'Work completed, parts, shop, next service, etc.'),
-      ].join('');
-    case 'Home maintenance':
-      return [
-        field('Task', 'task', 'text', { required: true, placeholder: 'Change furnace filter' }),
-        selectField('Area', 'area', ['Whole home', 'HVAC', 'Kitchen', 'Bathroom', 'Exterior', 'Safety', 'Appliance', 'Yard', 'Other']),
-        field('Due / completed date', 'date', 'date', { required: true, value: date }),
-        selectField('Repeat', 'repeat', ['No repeat', 'Monthly', 'Every 3 months', 'Every 6 months', 'Yearly', 'Custom']),
-        textArea('Details', 'notes', 'Model, filter size, contractor, parts, notes…'),
-      ].join('');
-    case 'Speak':
-      return [
-        `<div class="capture-dictation capture-field-wide"><button type="button" class="capture-dictate" data-capture-dictate>🎙 Start dictation</button><small>Uses browser speech recognition when available. You can always type instead.</small></div>`,
-        textArea('Quick capture', 'transcript', 'Speak or type what you want Family OS to remember…', true),
-        selectField('Save as', 'saveAs', ['Quick note', 'Reminder', 'Event idea', 'Health note', 'Home note', 'Vehicle note']),
-      ].join('');
+  if (type === 'select') {
+    return `<label class="${wrapper}"><span>${escapeHtml(field.label)}</span><select name="${escapeHtml(field.name)}"${required}>${(field.options ?? []).map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('')}</select></label>`;
   }
-}
+  if (type === 'textarea') {
+    return `<label class="${wrapper}"><span>${escapeHtml(field.label)}</span><textarea name="${escapeHtml(field.name)}" rows="4"${required}${field.placeholder ? ` placeholder="${escapeHtml(field.placeholder)}"` : ''}></textarea></label>`;
+  }
+  if (type === 'file') {
+    return `<label class="${wrapper}"><span>${escapeHtml(field.label)}</span><input name="${escapeHtml(field.name)}" type="file" accept="image/*,application/pdf"><small>The file stays on this device; only its name and confirmed record details are stored for now.</small></label>`;
+  }
 
-function definitionFor(kind: CaptureKind) {
-  return captures.find(item => item.kind === kind) ?? captures[0];
+  return `<label class="${wrapper}"><span>${escapeHtml(field.label)}</span><input name="${escapeHtml(field.name)}" type="${type}"${required}${field.placeholder ? ` placeholder="${escapeHtml(field.placeholder)}"` : ''}${value ? ` value="${escapeHtml(value)}"` : ''}${field.step ? ` step="${field.step}"` : ''}${field.min ? ` min="${field.min}"` : ''}></label>`;
 }
 
 function renderSavedRecords() {
   const records = loadCaptureRecords();
   if (!records.length) return '';
-
-  return `
-    <section class="capture-local-records">
-      <div class="capture-local-head"><div><span class="eyebrow">Saved locally</span><strong>${records.length} record${records.length === 1 ? '' : 's'}</strong></div><small>Recent records · remove anything you no longer need</small></div>
-      <div class="capture-local-list">
-        ${records.slice(0, 8).map(record => {
-          const definition = definitionFor(record.kind);
-          return `<article class="capture-local-row" data-capture-record="${escapeHtml(record.id)}" style="--capture-accent:${definition.accent}">
-            <span class="capture-local-icon">${definition.icon}</span>
-            <div><strong>${escapeHtml(captureRecordSummary(record))}</strong><small>${escapeHtml(record.kind)} · ${escapeHtml(captureRecordDateLabel(record))}</small></div>
-            <button type="button" data-capture-delete="${escapeHtml(record.id)}" aria-label="Remove ${escapeHtml(record.kind)}">Remove</button>
-          </article>`;
-        }).join('')}
-      </div>
-    </section>`;
+  return `<section class="capture-local-records">
+    <div class="capture-local-head"><div><span class="eyebrow">Saved locally</span><strong>${records.length} record${records.length === 1 ? '' : 's'}</strong></div><small>Recent records · remove anything you no longer need</small></div>
+    <div class="capture-local-list">${records.slice(0, 8).map(record => {
+      const definition = definitionFor(record.kind);
+      return `<article class="capture-local-row" data-capture-record="${escapeHtml(record.id)}" style="--capture-accent:${definition.accent}">
+        <span class="capture-local-icon">${definition.icon}</span>
+        <div><strong>${escapeHtml(captureRecordSummary(record))}</strong><small>${escapeHtml(record.kind)} · ${escapeHtml(captureRecordDateLabel(record))}</small></div>
+        <button type="button" data-capture-delete="${escapeHtml(record.id)}">Remove</button>
+      </article>`;
+    }).join('')}</div>
+  </section>`;
 }
 
 function renderSelection(stage: HTMLElement) {
   stage.dataset.captureView = 'menu';
-  stage.innerHTML = `
-    <div class="capture-view capture-view-menu">
-      <header class="capture-pro-header">
-        <div><span class="eyebrow">Universal capture</span><h2>What would you like to add?</h2><p>Choose a record type. Family OS validates it, saves it locally, and updates the relevant views immediately.</p></div>
-        <button type="button" class="capture-icon-button" data-capture-close aria-label="Close">×</button>
-      </header>
-      <div class="capture-option-grid">
-        ${captures.map(item => `<button type="button" class="capture-option" data-capture-kind="${item.kind}" style="--capture-accent:${item.accent}"><span class="capture-option-icon">${item.icon}</span><span><strong>${item.kind}</strong><small>${item.description}</small></span><b aria-hidden="true">›</b></button>`).join('')}
-      </div>
-      ${renderSavedRecords()}
-      <footer class="capture-pro-footer"><span>🔐 Local browser storage</span><span>Ready for future Google Calendar / cloud adapters</span></footer>
-    </div>`;
+  stage.innerHTML = `<div class="capture-view capture-view-menu">
+    <header class="capture-pro-header">
+      <div><span class="eyebrow">Universal capture</span><h2>What would you like to add?</h2><p>Choose a record type. Family OS validates it, saves it locally, and updates the relevant views immediately.</p></div>
+      <button type="button" class="capture-icon-button" data-capture-close aria-label="Close">×</button>
+    </header>
+    <div class="capture-option-grid">${captures.map(item => `<button type="button" class="capture-option" data-capture-kind="${item.kind}" style="--capture-accent:${item.accent}"><span class="capture-option-icon">${item.icon}</span><span><strong>${item.kind}</strong><small>${item.description}</small></span><b aria-hidden="true">›</b></button>`).join('')}</div>
+    ${renderSavedRecords()}
+    <footer class="capture-pro-footer"><span>🔐 Local browser storage</span><span>Ready for future Google Calendar / cloud adapters</span></footer>
+  </div>`;
 }
 
 function renderForm(stage: HTMLElement, kind: CaptureKind) {
   const item = definitionFor(kind);
   stage.dataset.captureView = 'form';
-  stage.innerHTML = `
-    <div class="capture-view capture-view-form" style="--capture-accent:${item.accent}">
-      <header class="capture-pro-header capture-form-header">
-        <button type="button" class="capture-icon-button capture-back" data-capture-back aria-label="Back">‹</button>
-        <div class="capture-form-heading"><span class="capture-form-icon">${item.icon}</span><div><span class="eyebrow">Add record</span><h2>${item.kind}</h2><p>${item.description}</p></div></div>
-        <button type="button" class="capture-icon-button" data-capture-close aria-label="Close">×</button>
-      </header>
-      <form class="capture-form" data-capture-form data-capture-form-kind="${item.kind}" novalidate>
-        <div class="capture-validation-summary" data-capture-validation hidden></div>
-        <div class="capture-form-grid">${formFields(kind)}</div>
-        <div class="capture-form-actions"><button type="button" class="capture-secondary" data-capture-back>Back</button><button type="submit" class="capture-save">Save ${item.kind}</button></div>
-      </form>
-    </div>`;
+  const dictation = kind === 'Speak'
+    ? `<div class="capture-dictation capture-field-wide"><button type="button" class="capture-dictate" data-capture-dictate>🎙 Start dictation</button><small>Uses browser speech recognition when available. You can always type instead.</small></div>`
+    : '';
+  stage.innerHTML = `<div class="capture-view capture-view-form" style="--capture-accent:${item.accent}">
+    <header class="capture-pro-header capture-form-header">
+      <button type="button" class="capture-icon-button capture-back" data-capture-back aria-label="Back">‹</button>
+      <div class="capture-form-heading"><span class="capture-form-icon">${item.icon}</span><div><span class="eyebrow">Add record</span><h2>${item.kind}</h2><p>${item.description}</p></div></div>
+      <button type="button" class="capture-icon-button" data-capture-close aria-label="Close">×</button>
+    </header>
+    <form class="capture-form" data-capture-form data-capture-form-kind="${item.kind}" novalidate>
+      <div class="capture-validation-summary" data-capture-validation hidden></div>
+      ${dictation}
+      <div class="capture-form-grid">${schemas[kind].map(renderField).join('')}</div>
+      <div class="capture-form-actions"><button type="button" class="capture-secondary" data-capture-back>Back</button><button type="submit" class="capture-save">Save ${item.kind}</button></div>
+    </form>
+  </div>`;
 }
 
 function renderSuccess(stage: HTMLElement, kind: CaptureKind) {
@@ -296,8 +286,7 @@ function renderSuccess(stage: HTMLElement, kind: CaptureKind) {
 
 function formValues(form: HTMLFormElement) {
   const values: Record<string, string> = {};
-  const data = new FormData(form);
-  for (const [key, value] of data.entries()) values[key] = value instanceof File ? value.name : String(value);
+  for (const [key, value] of new FormData(form).entries()) values[key] = value instanceof File ? value.name : String(value);
   return values;
 }
 
@@ -318,15 +307,14 @@ function showValidation(form: HTMLFormElement, errors: Record<string, string>) {
     summary.innerHTML = `<strong>Please check ${entries.length === 1 ? 'this field' : 'these fields'}:</strong><ul>${entries.map(([, message]) => `<li>${escapeHtml(message)}</li>`).join('')}</ul>`;
   }
 
-  let firstControl: HTMLElement | null = null;
-  entries.forEach(([fieldName, message]) => {
+  for (const [fieldName, message] of entries) {
     const container = form.querySelector<HTMLElement>(`[data-capture-field="${CSS.escape(fieldName)}"]`);
-    const control = form.querySelector<HTMLElement>(`[name="${CSS.escape(fieldName)}"]`);
     container?.classList.add('capture-field-invalid');
     if (container) container.insertAdjacentHTML('beforeend', `<small class="capture-field-error">${escapeHtml(message)}</small>`);
-    if (!firstControl && control) firstControl = control;
-  });
-  firstControl?.focus({ preventScroll: false });
+  }
+
+  const firstName = entries[0]?.[0];
+  if (firstName) form.querySelector<HTMLElement>(`[name="${CSS.escape(firstName)}"]`)?.focus({ preventScroll: true });
 }
 
 function clearStageAnimationStyles(stage: HTMLElement) {
@@ -338,15 +326,14 @@ function clearStageAnimationStyles(stage: HTMLElement) {
 async function transitionStage(stage: HTMLElement, render: () => void, direction: 1 | -1) {
   if (transitioning) return;
   transitioning = true;
-
   try {
-    await animateElement(stage, { opacity: [1, 0], x: [0, direction * -34] }, { duration: 0.16, ease: [0.4, 0, 1, 1] });
+    await animateElement(stage, { opacity: [1, 0], x: [0, -34 * direction] }, { duration: 0.16, ease: [0.4, 0, 1, 1] });
     render();
     stage.scrollTop = 0;
     stage.style.opacity = '0';
-    stage.style.transform = `translateX(${direction * 38}px)`;
+    stage.style.transform = `translateX(${38 * direction}px)`;
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
-    await animateElement(stage, { opacity: [0, 1], x: [direction * 38, 0] }, { duration: 0.3, ease: [0.22, 1, 0.36, 1] });
+    await animateElement(stage, { opacity: [0, 1], x: [38 * direction, 0] }, { duration: 0.3, ease: [0.22, 1, 0.36, 1] });
     clearStageAnimationStyles(stage);
     stage.scrollTop = 0;
   } finally {
@@ -358,15 +345,12 @@ function setupDictation(stage: HTMLElement) {
   const button = stage.querySelector<HTMLButtonElement>('[data-capture-dictate]');
   const textarea = stage.querySelector<HTMLTextAreaElement>('textarea[name="transcript"]');
   if (!button || !textarea) return;
-
-  const win = window as Window & { SpeechRecognition?: typeof window.SpeechRecognition; webkitSpeechRecognition?: typeof window.SpeechRecognition };
-  const Recognition = win.SpeechRecognition || win.webkitSpeechRecognition;
+  const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
   if (!Recognition) {
     button.disabled = true;
     button.textContent = '🎙 Dictation unavailable in this browser';
     return;
   }
-
   button.addEventListener('click', () => {
     const recognition = new Recognition();
     recognition.lang = navigator.language || 'en-CA';
@@ -392,9 +376,8 @@ function setupDictation(stage: HTMLElement) {
 async function closeCapture() {
   if (closing || !activeHost || !activeOverlay) return;
   closing = true;
-  const modal = activeHost.querySelector('.capture-pro');
-  void animateElement(modal, { opacity: [1, 0], scale: [1, 0.975], y: [0, 14] }, { duration: 0.2, ease: [0.4, 0, 1, 1] });
-  void animateElement(activeOverlay, { opacity: [1, 0] }, { duration: 0.22, ease: 'easeOut' });
+  void animateElement(activeHost.querySelector('.capture-pro'), { opacity: [1, 0], scale: [1, 0.975], y: [0, 14] }, { duration: 0.2 });
+  void animateElement(activeOverlay, { opacity: [1, 0] }, { duration: 0.22 });
   await new Promise(resolve => window.setTimeout(resolve, 205));
   activeOverlay.querySelector<HTMLButtonElement>('.capture > header > button')?.click();
   activeHost.remove();
@@ -412,8 +395,7 @@ function bindStage(stage: HTMLElement) {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
-    const closeButton = target.closest<HTMLElement>('[data-capture-close]');
-    if (closeButton) {
+    if (target.closest('[data-capture-close]')) {
       void closeCapture();
       return;
     }
@@ -423,23 +405,22 @@ function bindStage(stage: HTMLElement) {
       const id = deleteButton.dataset.captureDelete;
       if (!window.confirm('Remove this local Family OS record?')) return;
       const row = deleteButton.closest<HTMLElement>('[data-capture-record]');
-      void animateElement(row, { opacity: [1, 0], height: [row?.offsetHeight ?? 48, 0], scale: [1, 0.98] }, { duration: 0.2, ease: 'easeOut' }).then(() => {
+      void animateElement(row, { opacity: [1, 0] }, { duration: 0.18 }).then(() => {
         removeCaptureRecord(id);
         renderSelection(stage);
       });
       return;
     }
 
-    const backButton = target.closest<HTMLElement>('[data-capture-back], [data-capture-add-another]');
-    if (backButton) {
+    if (target.closest('[data-capture-back], [data-capture-add-another]')) {
       void transitionStage(stage, () => renderSelection(stage), -1);
       return;
     }
 
-    // Only an actual menu option can navigate into a form. Forms deliberately
-    // use data-capture-form-kind, so inputs/labels/selects can never match here.
+    // Record navigation is scoped to the actual menu button only. Forms use a
+    // different attribute, so clicks/focus on any field can never route here.
     const option = target.closest<HTMLButtonElement>('.capture-option[data-capture-kind]');
-    if (!option || !option.dataset.captureKind) return;
+    if (!option?.dataset.captureKind) return;
     const kind = option.dataset.captureKind as CaptureKind;
     void transitionStage(stage, () => {
       renderForm(stage, kind);
@@ -448,12 +429,11 @@ function bindStage(stage: HTMLElement) {
   });
 
   stage.addEventListener('input', event => {
-    const control = event.target;
-    if (!(control instanceof HTMLElement)) return;
-    const field = control.closest<HTMLElement>('[data-capture-field]');
-    if (!field) return;
-    field.classList.remove('capture-field-invalid');
-    field.querySelector('.capture-field-error')?.remove();
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const field = target.closest<HTMLElement>('[data-capture-field]');
+    field?.classList.remove('capture-field-invalid');
+    field?.querySelector('.capture-field-error')?.remove();
   });
 
   stage.addEventListener('submit', event => {
@@ -461,10 +441,7 @@ function bindStage(stage: HTMLElement) {
     if (!(form instanceof HTMLFormElement) || !form.matches('[data-capture-form]')) return;
     event.preventDefault();
     const kind = form.dataset.captureFormKind as CaptureKind | undefined;
-    if (!kind) {
-      console.error('Family OS capture form is missing its record kind.');
-      return;
-    }
+    if (!kind) return;
     const result = addCaptureRecord(kind, formValues(form));
     if (!result.record) {
       showValidation(form, result.validation.errors);
@@ -483,14 +460,10 @@ function trapFocus(event: KeyboardEvent) {
     return;
   }
   if (event.key !== 'Tab') return;
-
-  const focusable = Array.from(activeHost.querySelectorAll<HTMLElement>(
-    'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
-  ));
+  const focusable = Array.from(activeHost.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'));
   if (!focusable.length) return;
   const first = focusable[0];
   const last = focusable[focusable.length - 1];
-
   if (event.shiftKey && document.activeElement === first) {
     event.preventDefault();
     last.focus();
@@ -525,8 +498,8 @@ function enhanceOverlay(overlay: HTMLElement) {
   });
 
   requestAnimationFrame(() => {
-    void animateElement(overlay, { opacity: [0, 1] }, { duration: 0.22, ease: 'easeOut' });
-    void animateElement(modal, { opacity: [0, 1], scale: [0.965, 1], y: [22, 0] }, { duration: 0.38, ease: [0.22, 1, 0.36, 1] });
+    void animateElement(overlay, { opacity: [0, 1] }, { duration: 0.22 });
+    void animateElement(modal, { opacity: [0, 1], scale: [0.965, 1], y: [22, 0] }, { duration: 0.38 });
     stage.querySelector<HTMLElement>('button')?.focus({ preventScroll: true });
   });
 }
@@ -537,7 +510,6 @@ function sync() {
     enhanceOverlay(overlay);
     return;
   }
-
   if (activeHost) {
     activeHost.remove();
     activeHost = null;
