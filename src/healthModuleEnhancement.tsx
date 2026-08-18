@@ -20,8 +20,7 @@ function findHealthStack() {
 }
 
 function renderHealth() {
-  if (!root) return;
-  root.render(<HealthModule providers={providers} records={records} />);
+  root?.render(<HealthModule providers={providers} records={records} />);
 }
 
 function teardown() {
@@ -34,6 +33,7 @@ function teardown() {
   host?.remove();
   host = null;
   if (sourceStack) delete sourceStack.dataset.healthEnhanced;
+  delete document.documentElement.dataset.healthModuleActive;
   sourceStack = null;
 }
 
@@ -43,9 +43,14 @@ function mount(stack: HTMLElement) {
 
   sourceStack = stack;
   sourceStack.dataset.healthEnhanced = 'true';
+  document.documentElement.dataset.healthModuleActive = 'true';
+
+  // Keep this React root outside #root. Injecting it into the App-owned stack made
+  // ordinary App re-renders capable of deleting the host and resetting modal state.
   host = document.createElement('div');
   host.className = 'health-module-host';
-  sourceStack.prepend(host);
+  host.dataset.healthModuleHost = 'true';
+  document.body.appendChild(host);
   root = createRoot(host);
 
   providers = loadHealthProviders();
