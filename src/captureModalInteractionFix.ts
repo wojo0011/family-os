@@ -1,51 +1,51 @@
 let installed = false;
+const guarded = new WeakSet<EventTarget>();
 
-type PendingKind = {
-  form: HTMLFormElement;
-  kind: string;
-};
+function guardControl(element: Element) {
+  if (guarded.has(element)) return;
+  guarded.add(element);
 
-const pendingKinds = new WeakMap<Event, PendingKind>();
+  // Let the control receive its click and perform its native default action
+  // (focus, date/time picker, select menu, file picker, etc.), but do not let
+  // that click bubble back to the capture modal's delegated navigation router.
+  element.addEventListener('click', event => {
+    event.stopPropagation();
+  });
+}
+
+function guardCurrentControls(root: ParentNode = document) {
+  root.querySelectorAll(
+    '.capture-pro-stage form[data-capture-form] input, ' +
+    '.capture-pro-stage form[data-capture-form] textarea, ' +
+    '.capture-pro-stage form[data-capture-form] select, ' +
+    '.capture-pro-stage form[data-capture-form] label'
+  ).forEach(guardControl);
+}
 
 /**
- * The capture controller uses data-capture-kind on both the menu option and
- * the active form. Its delegated click router intentionally looks upward with
- * closest(), so a click on an input could otherwise resolve to the form and be
- * mistaken for a menu-option click.
- *
- * Keep the form's kind available for submit/validation, but hide that marker
- * only while a click travels through the delegated click handler. It is
- * restored at document-bubble time before the browser performs the button's
- * default action (including form submission).
+ * Capture forms are rendered dynamically inside the modal. The modal controller
+ * uses a delegated click listener for menu navigation, so form controls must
+ * stop their clicks at the control itself. This preserves native input behavior
+ * while guaranteeing a form-field click can never be interpreted as another
+ * "open this record type" navigation action.
  */
 export function installCaptureModalInteractionFix() {
   if (installed || typeof document === 'undefined') return;
   installed = true;
 
-  document.addEventListener('click', event => {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
+  guardCurrentControls();
 
-    // Actual record-type menu buttons must continue through the normal router.
-    if (target.closest('.capture-option[data-capture-kind]')) return;
-
-    const form = target.closest<HTMLFormElement>('form[data-capture-form][data-capture-kind]');
-    if (!form) return;
-
-    const kind = form.getAttribute('data-capture-kind');
-    if (!kind) return;
-
-    pendingKinds.set(event, { form, kind });
-    form.removeAttribute('data-capture-kind');
-  }, true);
-
-  document.addEventListener('click', event => {
-    const pending = pendingKinds.get(event);
-    if (!pending) return;
-
-    if (pending.form.isConnected) {
-      pending.form.setAttribute('data-capture-kind', pending.kind);
+  const observer = new MutationObserver(records => {
+    for (const record of records) {
+      record.addedNodes.forEach(node => {
+        if (!(node instanceof Element)) return;
+        if (node.matches('input, textarea, select, label') && node.closest('form[data-capture-form]')) {
+          guardControl(node);
+        }
+        guardCurrentControls(node);
+      });
     }
-    pendingKinds.delete(event);
   });
+
+  observer.observe(document.body, { childList: true, subtree: true });
 }
