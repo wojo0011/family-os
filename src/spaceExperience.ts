@@ -453,28 +453,6 @@ async function createThreeLayer(host: HTMLElement, layer: HTMLElement, token: nu
   );
   scene.add(stars);
 
-  const planet = new THREE.Mesh(
-    new THREE.SphereGeometry(2.8, quality === 'low' ? 26 : 52, quality === 'low' ? 20 : 40),
-    new THREE.MeshStandardMaterial({ color: 0x735fda, roughness: 0.7, metalness: 0.08, emissive: 0x1c123d, emissiveIntensity: 0.62 }),
-  );
-  planet.position.set(7.5, 4.2, -10.2);
-  scene.add(planet);
-
-  const ringed = new THREE.Group();
-  const ringPlanet = new THREE.Mesh(
-    new THREE.SphereGeometry(0.95, 36, 28),
-    new THREE.MeshStandardMaterial({ color: 0xc98572, roughness: 0.64 }),
-  );
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(1.5, 0.06, 12, 96),
-    new THREE.MeshStandardMaterial({ color: 0xf1c79a, transparent: true, opacity: 0.72 }),
-  );
-  ring.rotation.x = 1.12;
-  ring.rotation.y = -0.22;
-  ringed.add(ringPlanet, ring);
-  ringed.position.set(2.5, 4.6, -8.1);
-  scene.add(ringed);
-
   const GROUND_Y = -3.6;
   const ROAD_WORLD_Z = -3.15;
   const ROAD_LOCAL_Y = -ROAD_WORLD_Z;
@@ -620,9 +598,6 @@ async function createThreeLayer(host: HTMLElement, layer: HTMLElement, token: nu
 
     stars.rotation.y = elapsed * 0.0035;
     stars.rotation.x = Math.sin(elapsed * 0.08) * 0.015;
-    planet.rotation.y = elapsed * 0.035;
-    ringed.rotation.y = Math.sin(elapsed * 0.15) * 0.08;
-    ringed.position.y = 4.6 + Math.sin(elapsed * 0.22) * 0.12;
 
     if (roverState === 'waiting') {
       waitRemaining -= delta;
