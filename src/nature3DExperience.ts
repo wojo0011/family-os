@@ -157,7 +157,6 @@ function addStream(THREE: ThreeModule, scene: InstanceType<ThreeModule['Scene']>
     clearcoatRoughness: 0.18,
   });
   const stream = new THREE.Mesh(geometry, material);
-  stream.rotation.x = Math.PI / 2;
   stream.position.y = -1.78;
   scene.add(stream);
   return { stream, material };
