@@ -19,6 +19,7 @@ import './captureRecords.css';
 import './calendarPlanner.css';
 import './healthModule.css';
 import './healthModuleMount.css';
+import './medicationAdherence.css';
 
 // Recovery-first boot: the application shell stays lightweight. No Three.js,
 // WebGL, planet textures, rover scene, city skyline, Nature or Soft scene starts here.
