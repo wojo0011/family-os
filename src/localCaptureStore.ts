@@ -10,6 +10,8 @@ export const CAPTURE_KINDS = [
   'Pet record',
   'Vehicle update',
   'Home maintenance',
+  'Safety record',
+  'Appliance',
   'Speak',
 ] as const;
 
@@ -69,6 +71,25 @@ export const MONEY_CATEGORIES = [
 export const BILL_STATUSES = ['Unpaid', 'Paid'] as const;
 export const BILL_RECURRENCES = ['One-time', 'Weekly', 'Biweekly', 'Monthly', 'Every 2 months', 'Quarterly', 'Every 6 months', 'Yearly'] as const;
 export const PAYMENT_METHODS = ['Cash', 'Debit', 'Credit', 'Bank transfer', 'Pre-authorized', 'Gift card', 'Other'] as const;
+
+export const HOME_AREAS = [
+  'Whole home', 'HVAC', 'Kitchen', 'Bathroom', 'Laundry', 'Electrical', 'Plumbing',
+  'Exterior', 'Roof', 'Safety', 'Appliance', 'Yard', 'Garage', 'Other',
+] as const;
+export const HOME_MAINTENANCE_REPEATS = ['No repeat', 'Weekly', 'Monthly', 'Every 3 months', 'Every 6 months', 'Yearly', 'Every 2 years', 'Custom'] as const;
+export const HOME_MAINTENANCE_STATUSES = ['Due', 'Scheduled', 'Completed'] as const;
+export const HOME_SAFETY_TYPES = [
+  'Smoke alarm', 'Carbon monoxide alarm', 'Fire extinguisher', 'Emergency kit',
+  'First aid kit', 'GFCI / outlet', 'Sump pump', 'Radon', 'Security system',
+  'Emergency contact', 'Other',
+] as const;
+export const HOME_SAFETY_STATUSES = ['OK', 'Due soon', 'Needs attention', 'Replaced'] as const;
+export const APPLIANCE_TYPES = [
+  'Refrigerator', 'Freezer', 'Range / oven', 'Cooktop', 'Dishwasher', 'Microwave',
+  'Washer', 'Dryer', 'Furnace', 'Air conditioner', 'Water heater', 'HVAC',
+  'Vacuum', 'Small appliance', 'Other',
+] as const;
+export const APPLIANCE_STATUSES = ['Active', 'Needs service', 'Retired'] as const;
 
 export type EventCategory = typeof EVENT_CATEGORIES[number];
 
@@ -267,8 +288,36 @@ export function validateCaptureValues(kind: CaptureKind, rawValues: Record<strin
     case 'Home maintenance':
       required(errors, values, 'task', 'Task', 2);
       dateField(errors, values, 'date', 'Due / completed date');
-      required(errors, values, 'area', 'Area');
-      required(errors, values, 'repeat', 'Repeat');
+      allowed(errors, values, 'area', 'Area', HOME_AREAS);
+      allowed(errors, values, 'repeat', 'Repeat', HOME_MAINTENANCE_REPEATS);
+      allowedOptional(errors, values, 'status', 'Status', HOME_MAINTENANCE_STATUSES);
+      dateField(errors, values, 'completedDate', 'Completed date', true);
+      nonNegativeNumber(errors, values, 'cost', 'Cost', { max: 10_000_000 });
+      maxLength(errors, values, 'provider', 'Provider', 180);
+      break;
+    case 'Safety record':
+      required(errors, values, 'item', 'Safety item', 2);
+      allowed(errors, values, 'safetyType', 'Safety type', HOME_SAFETY_TYPES);
+      required(errors, values, 'location', 'Location', 2);
+      allowed(errors, values, 'status', 'Status', HOME_SAFETY_STATUSES);
+      dateField(errors, values, 'lastChecked', 'Last checked date', true);
+      dateField(errors, values, 'nextDue', 'Next due date', true);
+      maxLength(errors, values, 'model', 'Model / identifier', 180);
+      break;
+    case 'Appliance':
+      required(errors, values, 'appliance', 'Appliance name', 2);
+      allowed(errors, values, 'applianceType', 'Appliance type', APPLIANCE_TYPES);
+      required(errors, values, 'location', 'Location', 2);
+      allowed(errors, values, 'status', 'Status', APPLIANCE_STATUSES);
+      dateField(errors, values, 'purchaseDate', 'Purchase date', true);
+      dateField(errors, values, 'warrantyEnd', 'Warranty end date', true);
+      nonNegativeNumber(errors, values, 'cost', 'Cost', { max: 10_000_000 });
+      maxLength(errors, values, 'brand', 'Brand', 120);
+      maxLength(errors, values, 'model', 'Model', 180);
+      maxLength(errors, values, 'serial', 'Serial number', 180);
+      maxLength(errors, values, 'retailer', 'Retailer', 180);
+      maxLength(errors, values, 'receipt', 'Receipt file name', 260);
+      maxLength(errors, values, 'manual', 'Manual / document reference', 320);
       break;
     case 'Speak':
       required(errors, values, 'transcript', 'Quick capture', 2);
@@ -276,7 +325,7 @@ export function validateCaptureValues(kind: CaptureKind, rawValues: Record<strin
       break;
   }
 
-  const commonTextFields = ['title', 'bill', 'merchant', 'medication', 'directions', 'value', 'pet', 'vehicle', 'task', 'provider'];
+  const commonTextFields = ['title', 'bill', 'merchant', 'medication', 'directions', 'value', 'pet', 'vehicle', 'task', 'item', 'appliance', 'provider'];
   commonTextFields.forEach(field => maxLength(errors, values, field, field, 220));
   maxLength(errors, values, 'notes', 'Notes', 4000);
   maxLength(errors, values, 'transcript', 'Quick capture', 4000);
@@ -441,6 +490,19 @@ export function captureRecordToCalendarEntry(record: CaptureRecord): LocalCalend
       title = v.task;
       start = dateTime(v.date, '12:00');
       category = 'home';
+      location = v.area || undefined;
+      break;
+    case 'Safety record':
+      title = `Safety check · ${v.item}`;
+      start = dateTime(v.nextDue, '09:00');
+      category = 'home';
+      location = v.location || undefined;
+      break;
+    case 'Appliance':
+      title = `Warranty · ${v.appliance}`;
+      start = dateTime(v.warrantyEnd, '09:00');
+      category = 'home';
+      location = v.location || undefined;
       break;
     case 'Expense':
     case 'Scan receipt':
@@ -473,13 +535,15 @@ export function captureRecordSummary(record: CaptureRecord) {
     case 'Milestone': return v.title || 'Milestone';
     case 'Pet record': return `${v.pet || 'Pet'} · ${v.recordType || 'Record'}`;
     case 'Vehicle update': return `${v.vehicle || 'Vehicle'} · ${v.updateType || 'Update'}`;
-    case 'Home maintenance': return v.task || 'Home maintenance';
+    case 'Home maintenance': return `${v.task || 'Home maintenance'}${v.status ? ` · ${v.status}` : ''}`;
+    case 'Safety record': return `${v.item || 'Safety record'} · ${v.status || v.safetyType || 'Safety'}`;
+    case 'Appliance': return `${v.appliance || 'Appliance'}${v.brand ? ` · ${v.brand}` : ''}${v.model ? ` ${v.model}` : ''}`;
     case 'Speak': return v.transcript || 'Quick capture';
   }
 }
 
 export function captureRecordDateLabel(record: CaptureRecord) {
-  const raw = record.values.date || record.values.dueDate || record.values.startDate || record.createdAt.slice(0, 10);
+  const raw = record.values.date || record.values.dueDate || record.values.nextDue || record.values.warrantyEnd || record.values.purchaseDate || record.values.startDate || record.createdAt.slice(0, 10);
   const parsed = isValidDate(raw) ? new Date(`${raw}T12:00:00`) : new Date(record.createdAt);
   return Number.isNaN(parsed.getTime()) ? '' : new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }).format(parsed);
 }
