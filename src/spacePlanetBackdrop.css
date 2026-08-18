@@ -123,19 +123,6 @@
     inset 0 0 0 1px rgba(255,255,255,.05);
 }
 
-/* Cover the old procedural placeholder planets beneath this layer so the
-   textured Earth/Mars become the only visually dominant worlds. */
-.space-texture-earth::before,
-.space-texture-mars::before {
-  content: "";
-  position: absolute;
-  inset: -34px;
-  z-index: -1;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(7,8,23,.78) 45%, transparent 72%);
-  filter: blur(10px);
-}
-
 :root[data-space-panels-hidden="true"] .content > .stack {
   opacity: 0;
   transform: translateY(12px) scale(.992);
