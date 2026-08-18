@@ -2,8 +2,15 @@ let installed = false;
 let starting = false;
 let started = false;
 let panelsHidden = false;
+let actions: HTMLDivElement | null = null;
 let button: HTMLButtonElement | null = null;
 let panelButton: HTMLButtonElement | null = null;
+let syncQueued = false;
+
+function findTodayHost() {
+  const hero = document.querySelector<HTMLElement>('.content > .stack > .hero-grid');
+  return hero?.parentElement?.parentElement instanceof HTMLElement ? hero.parentElement.parentElement : null;
+}
 
 function addStyles() {
   if (document.getElementById('family-os-3d-launcher-styles')) return;
@@ -15,13 +22,14 @@ function addStyles() {
       right: 24px;
       bottom: 24px;
       z-index: 60;
-      display: flex;
+      display: none;
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
       justify-content: flex-end;
       max-width: min(92vw, 520px);
     }
+    .family-os-space-actions.is-visible { display: flex; }
     .family-os-3d-launcher,
     .family-os-scene-toggle {
       display: inline-flex;
@@ -89,6 +97,44 @@ function setPanelsHidden(hidden: boolean) {
     : 'Hide the Today dashboard panels to view the moon-base background.';
 }
 
+function resetLauncher() {
+  starting = false;
+  started = false;
+  panelsHidden = false;
+  delete document.documentElement.dataset.spacePanelsHidden;
+
+  if (button) {
+    button.disabled = false;
+    button.dataset.state = 'ready';
+    button.textContent = '🌕 Launch 3D Space';
+    button.title = 'Load the interactive moon-base scene. 3D is never started automatically.';
+  }
+
+  panelButton?.classList.remove('is-visible');
+  if (panelButton) panelButton.setAttribute('aria-pressed', 'false');
+}
+
+function syncVisibility() {
+  if (!actions) return;
+  const isSpace = document.documentElement.dataset.theme === 'space';
+  const visible = isSpace && Boolean(findTodayHost());
+  actions.classList.toggle('is-visible', visible);
+
+  // Leaving Space destroys the actual Space scene through spaceExperience's
+  // theme observer. Reset this lightweight controller too, so returning to
+  // Space presents a fresh launcher instead of a stale "active" state.
+  if (!isSpace && (started || starting || panelsHidden)) resetLauncher();
+}
+
+function queueSync() {
+  if (syncQueued) return;
+  syncQueued = true;
+  requestAnimationFrame(() => {
+    syncQueued = false;
+    syncVisibility();
+  });
+}
+
 function showPanelToggle() {
   if (!panelButton) return;
   panelButton.classList.add('is-visible');
@@ -104,12 +150,11 @@ async function launch3D() {
 
   try {
     if (!webGL2Available()) throw new Error('WebGL 2 is not available in this browser.');
+    if (document.documentElement.dataset.theme !== 'space') throw new Error('Switch to Space theme first.');
+    if (!findTodayHost()) throw new Error('Open the Today dashboard first.');
 
-    // Switch the current visual session to Space without involving app startup.
-    document.documentElement.dataset.theme = 'space';
-
-    // Everything below is deliberately lazy. The stable dashboard never
-    // downloads Three.js or the textured planet layers until the user opts in.
+    // Everything below is deliberately lazy and can only execute while Space
+    // is the selected theme. The launcher never changes the user's theme.
     await Promise.all([
       import('./space-today.css'),
       import('./space-experience.css'),
@@ -122,15 +167,21 @@ async function launch3D() {
     ]);
 
     // One WebGL renderer only: moon terrain, rover and astronaut stay in the
-    // existing scene. Earth/Mars are layered DOM textures mounted into that same
-    // background layer, avoiding the second WebGL canvas that caused crashes.
+    // existing scene. Earth/Mars remain layered DOM textures in that same
+    // background experience rather than creating a second WebGL canvas.
     installSpaceExperience();
     installSpacePlanetBackdrop();
+
+    // The theme could have changed while the lazy chunks were downloading.
+    if (document.documentElement.dataset.theme !== 'space') {
+      resetLauncher();
+      return;
+    }
 
     started = true;
     button.dataset.state = 'active';
     button.textContent = '✓ 3D Moon-Base active';
-    button.title = '3D is active. Refresh the page to return to the lightweight dashboard.';
+    button.title = '3D is active. Switch themes or refresh to close it.';
     showPanelToggle();
   } catch (error) {
     console.error('Family OS 3D launch failed.', error);
@@ -150,7 +201,7 @@ export function installSpace3DLauncher() {
   installed = true;
   addStyles();
 
-  const actions = document.createElement('div');
+  actions = document.createElement('div');
   actions.className = 'family-os-space-actions';
 
   panelButton = document.createElement('button');
@@ -170,4 +221,11 @@ export function installSpace3DLauncher() {
 
   actions.append(panelButton, button);
   document.body.appendChild(actions);
+
+  const themeObserver = new MutationObserver(queueSync);
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  document.addEventListener('click', queueSync, true);
+  document.addEventListener('change', queueSync, true);
+  window.addEventListener('family-os:app-ready', queueSync);
+  queueSync();
 }
