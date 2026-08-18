@@ -22,6 +22,32 @@
   height: 52px;
 }
 
+/* Meteocons can fall back to an emoji if the remote SVG cannot load. Width and
+   height alone do not enlarge an emoji glyph, so size the fallback explicitly.
+   The Today hero fallback is about 3.5x the previous visible glyph size. */
+.weather-fallback {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.weather-fallback.weather-sm {
+  font-size: 26px;
+}
+
+.weather-fallback.weather-md {
+  font-size: 44px;
+}
+
+.weather-fallback.weather-lg {
+  font-size: 112px;
+  width: 232px;
+  height: 232px;
+  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, .22));
+  animation: family-weather-float 3.4s ease-in-out infinite;
+}
+
 /* The Meteocons artwork has a generous transparent viewBox. Give the primary
    Current location condition art a much larger box and then scale the visible
    SVG again so the weather reads as a hero instrument rather than a tiny icon. */
@@ -35,6 +61,15 @@
   height: 232px;
   scale: 1.34;
   margin: -58px -34px -52px -18px;
+  align-self: center;
+  justify-self: end;
+}
+
+/* Do not apply the SVG overscan transform to the emoji fallback. It already has
+   an explicit 112px glyph and should remain fully visible inside the card. */
+.weather > .weather-fallback.weather-lg {
+  scale: 1;
+  margin: -18px -14px -18px -8px;
   align-self: center;
   justify-self: end;
 }
@@ -167,6 +202,15 @@
     scale: 1.3;
     margin: -48px -26px -44px -10px;
   }
+
+  .weather-fallback.weather-lg {
+    font-size: 102px;
+  }
+
+  .weather > .weather-fallback.weather-lg {
+    scale: 1;
+    margin: -14px -10px -14px -6px;
+  }
 }
 
 @media (max-width: 720px) {
@@ -183,6 +227,15 @@
   .weather > .weather-lg {
     scale: 1.24;
     margin: -36px -18px -31px -8px;
+  }
+
+  .weather-fallback.weather-lg {
+    font-size: 88px;
+  }
+
+  .weather > .weather-fallback.weather-lg {
+    scale: 1;
+    margin: -8px -6px -8px -4px;
   }
 
   .weather-loader {
