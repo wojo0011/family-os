@@ -48,7 +48,7 @@ const people: Person[] = [
 ];
 
 const recordIcons: Record<CaptureKind, string> = {
-  Event: '📅', Reminder: '✓', Expense: '💵', 'Scan receipt': '🧾', Medication: '💊',
+  Event: '📅', Reminder: '✓', Bill: '💡', Expense: '💵', 'Scan receipt': '🧾', Medication: '💊',
   'Health entry': '🌡', Milestone: '🎂', 'Pet record': '🐕', 'Vehicle update': '🚗',
   'Home maintenance': '⌂', Speak: '🎙',
 };
@@ -56,7 +56,7 @@ const recordIcons: Record<CaptureKind, string> = {
 const pageCaptureKinds: Partial<Record<PageId, CaptureKind[]>> = {
   hub: ['Event', 'Reminder', 'Speak'],
   health: ['Medication', 'Health entry'],
-  money: ['Expense', 'Scan receipt'],
+  money: ['Bill', 'Expense', 'Scan receipt'],
   home: ['Home maintenance'],
   vehicles: ['Vehicle update'],
   pets: ['Pet record'],
@@ -338,6 +338,6 @@ export default function App() {
       <div className="content">{page === 'today' ? <Today events={visibleEvents} weather={weather} onAdd={() => setCapture(true)} lens={lens} onDeleteLocal={deleteLocal} /> : page === 'calendar' ? <Calendar events={visibleEvents} weather={weather} lens={lens} specialDaySet={specialDaySet} specialDayEffect={specialDayEffect} /> : page === 'settings' ? <Settings theme={theme} setTheme={setTheme} lens={lens} setLens={setLens} specialDaySet={specialDaySet} setSpecialDaySet={setSpecialDaySet} specialDayEffect={specialDayEffect} setSpecialDayEffect={setSpecialDayEffect} /> : <Module page={page} records={localRecords} onDelete={deleteLocal} />}</div>
     </main>
     <nav className="mobile-nav"><button onClick={() => setPage('today')}>☀<small>Today</small></button><button onClick={() => setPage('calendar')}>▦<small>Calendar</small></button><button className="fab" onClick={() => setCapture(true)}>+</button><button onClick={() => setPage('hub')}>◉<small>Hub</small></button><button onClick={() => setPage('settings')}>👤<small>Me</small></button></nav>
-    {capture && <div className="overlay" onClick={() => setCapture(false)}><section className="capture" onClick={event => event.stopPropagation()}><header><div><span className="eyebrow">Universal capture</span><h2>What would you like to add?</h2></div><button onClick={() => setCapture(false)}>×</button></header><div>{[['📅', 'Event'], ['✓', 'Reminder'], ['💵', 'Expense'], ['🧾', 'Scan receipt'], ['💊', 'Medication'], ['🌡', 'Health entry'], ['🎂', 'Milestone'], ['🐕', 'Pet record'], ['🚗', 'Vehicle update'], ['⌂', 'Home maintenance'], ['🎙', 'Speak']].map(([icon, label]) => <button key={label}><span>{icon}</span><strong>{label}</strong></button>)}</div><p className="note">Local persistence is active. Cloud and Google Calendar sync can be connected later through the same data layer.</p></section></div>}
+    {capture && <div className="overlay" onClick={() => setCapture(false)}><section className="capture" onClick={event => event.stopPropagation()}><header><div><span className="eyebrow">Universal capture</span><h2>What would you like to add?</h2></div><button onClick={() => setCapture(false)}>×</button></header><div>{[['📅', 'Event'], ['✓', 'Reminder'], ['💡', 'Bill'], ['💵', 'Expense'], ['🧾', 'Scan receipt'], ['💊', 'Medication'], ['🌡', 'Health entry'], ['🎂', 'Milestone'], ['🐕', 'Pet record'], ['🚗', 'Vehicle update'], ['⌂', 'Home maintenance'], ['🎙', 'Speak']].map(([icon, label]) => <button key={label}><span>{icon}</span><strong>{label}</strong></button>)}</div><p className="note">Local persistence is active. Cloud and Google Calendar sync can be connected later through the same data layer.</p></section></div>}
   </div>;
 }
