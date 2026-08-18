@@ -1,9 +1,12 @@
 import {
   addCaptureRecord,
+  BILL_RECURRENCES,
   captureRecordDateLabel,
   captureRecordSummary,
   EVENT_CATEGORIES,
   loadCaptureRecords,
+  MONEY_CATEGORIES,
+  PAYMENT_METHODS,
   removeCaptureRecord,
   type CaptureKind,
 } from './localCaptureStore';
@@ -41,8 +44,9 @@ const MOTION_URL = 'https://cdn.jsdelivr.net/npm/motion@11.11.13/+esm';
 const captures: CaptureDefinition[] = [
   { kind: 'Event', icon: '📅', description: 'Type, time, place, person and notes', accent: '#65b8ff' },
   { kind: 'Reminder', icon: '✓', description: 'A task with a due date or time', accent: '#53d7a6' },
-  { kind: 'Expense', icon: '💵', description: 'Amount, merchant and category', accent: '#f4c95d' },
-  { kind: 'Scan receipt', icon: '🧾', description: 'Attach a receipt and confirm details', accent: '#ffb66b' },
+  { kind: 'Bill', icon: '💡', description: 'Amount, due date, recurrence and payment status', accent: '#70d7c7' },
+  { kind: 'Expense', icon: '💵', description: 'Amount, merchant, category and payment method', accent: '#f4c95d' },
+  { kind: 'Scan receipt', icon: '🧾', description: 'Receipt details, totals and optional bill link', accent: '#ffb66b' },
   { kind: 'Medication', icon: '💊', description: 'Medicine, directions and schedule', accent: '#a78bfa' },
   { kind: 'Health entry', icon: '🌡', description: 'Symptoms, reading or health note', accent: '#ff8fbd' },
   { kind: 'Milestone', icon: '🎂', description: 'Birthday, first, graduation or memory', accent: '#ff9fc8' },
@@ -53,6 +57,7 @@ const captures: CaptureDefinition[] = [
 ];
 
 const personOptions = ['Family', 'Dad', 'Mom', 'Teen', 'Child'];
+const moneyPeople = ['Family', 'Dad', 'Mom', 'Teen'];
 
 const schemas: Record<CaptureKind, FieldDefinition[]> = {
   Event: [
@@ -72,20 +77,40 @@ const schemas: Record<CaptureKind, FieldDefinition[]> = {
     { label: 'Priority', name: 'priority', type: 'select', options: ['Normal', 'Important', 'Urgent'] },
     { label: 'Notes', name: 'notes', type: 'textarea', placeholder: 'Optional context…', wide: true },
   ],
+  Bill: [
+    { label: 'Bill / payee', name: 'bill', required: true, placeholder: 'Hydro' },
+    { label: 'Amount', name: 'amount', type: 'number', required: true, placeholder: '0.00', step: '0.01', min: '0.01' },
+    { label: 'Due date', name: 'dueDate', type: 'date', required: true, defaultValue: 'today' },
+    { label: 'Category', name: 'category', type: 'select', options: [...MONEY_CATEGORIES] },
+    { label: 'Recurrence', name: 'recurrence', type: 'select', options: [...BILL_RECURRENCES] },
+    { label: 'Responsible person', name: 'person', type: 'select', options: moneyPeople },
+    { label: 'Status', name: 'status', type: 'select', options: ['Unpaid', 'Paid'] },
+    { label: 'Autopay', name: 'autopay', type: 'select', options: ['No', 'Yes'] },
+    { label: 'Paid date', name: 'paidDate', type: 'date' },
+    { label: 'Account / reference', name: 'account', placeholder: 'Optional account number or reference' },
+    { label: 'Notes', name: 'notes', type: 'textarea', placeholder: 'Billing details, payment instructions, renewal context…', wide: true },
+  ],
   Expense: [
     { label: 'Merchant / description', name: 'merchant', required: true, placeholder: 'Groceries' },
     { label: 'Amount', name: 'amount', type: 'number', required: true, placeholder: '0.00', step: '0.01', min: '0.01' },
-    { label: 'Category', name: 'category', type: 'select', options: ['Groceries', 'Dining', 'Home', 'Vehicle', 'Health', 'Kids', 'Pets', 'Entertainment', 'Other'] },
+    { label: 'Tax', name: 'tax', type: 'number', placeholder: '0.00', step: '0.01', min: '0' },
+    { label: 'Category', name: 'category', type: 'select', options: [...MONEY_CATEGORIES] },
     { label: 'Date', name: 'date', type: 'date', required: true, defaultValue: 'today' },
-    { label: 'Paid by', name: 'person', type: 'select', options: ['Family', 'Dad', 'Mom', 'Teen'] },
+    { label: 'Paid by', name: 'person', type: 'select', options: moneyPeople },
+    { label: 'Payment method', name: 'paymentMethod', type: 'select', options: [...PAYMENT_METHODS] },
     { label: 'Notes', name: 'notes', type: 'textarea', placeholder: 'Optional expense note…', wide: true },
   ],
   'Scan receipt': [
-    { label: 'Receipt image', name: 'receipt', type: 'file', wide: true },
+    { label: 'Receipt image / PDF', name: 'receipt', type: 'file', wide: true },
     { label: 'Merchant', name: 'merchant', required: true, placeholder: 'Store name' },
     { label: 'Total', name: 'amount', type: 'number', placeholder: '0.00', step: '0.01', min: '0.01' },
+    { label: 'Subtotal', name: 'subtotal', type: 'number', placeholder: '0.00', step: '0.01', min: '0' },
+    { label: 'Tax', name: 'tax', type: 'number', placeholder: '0.00', step: '0.01', min: '0' },
+    { label: 'Tip', name: 'tip', type: 'number', placeholder: '0.00', step: '0.01', min: '0' },
     { label: 'Date', name: 'date', type: 'date', defaultValue: 'today' },
-    { label: 'Category', name: 'category', type: 'select', options: ['Groceries', 'Dining', 'Home', 'Vehicle', 'Health', 'Kids', 'Pets', 'Other'] },
+    { label: 'Category', name: 'category', type: 'select', options: [...MONEY_CATEGORIES] },
+    { label: 'Paid by', name: 'person', type: 'select', options: moneyPeople },
+    { label: 'Payment method', name: 'paymentMethod', type: 'select', options: [...PAYMENT_METHODS] },
     { label: 'Notes', name: 'notes', type: 'textarea', placeholder: 'Add a note before saving…', wide: true },
   ],
   Medication: [
@@ -149,8 +174,8 @@ let closing = false;
 let transitioning = false;
 
 function escapeHtml(value: string) {
-  return value.replace(/[&<>'"]/g, char => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
+  return value.replace(/[&<>'\"]/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '\"': '&quot;',
   }[char] ?? char));
 }
 
@@ -212,34 +237,34 @@ function renderField(field: FieldDefinition) {
   const classes = ['capture-field'];
   if (field.wide || type === 'textarea' || type === 'file') classes.push('capture-field-wide');
   if (type === 'file') classes.push('capture-file');
-  const wrapper = `${classes.join(' ')}" data-capture-field="${escapeHtml(field.name)}`;
+  const wrapper = `${classes.join(' ')}\" data-capture-field=\"${escapeHtml(field.name)}`;
   const required = field.required ? ' required' : '';
   const value = fieldValue(field);
 
   if (type === 'select') {
-    return `<label class="${wrapper}"><span>${escapeHtml(field.label)}</span><select name="${escapeHtml(field.name)}"${required}>${(field.options ?? []).map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('')}</select></label>`;
+    return `<label class=\"${wrapper}\"><span>${escapeHtml(field.label)}</span><select name=\"${escapeHtml(field.name)}\"${required}>${(field.options ?? []).map(option => `<option value=\"${escapeHtml(option)}\">${escapeHtml(option)}</option>`).join('')}</select></label>`;
   }
   if (type === 'textarea') {
-    return `<label class="${wrapper}"><span>${escapeHtml(field.label)}</span><textarea name="${escapeHtml(field.name)}" rows="4"${required}${field.placeholder ? ` placeholder="${escapeHtml(field.placeholder)}"` : ''}></textarea></label>`;
+    return `<label class=\"${wrapper}\"><span>${escapeHtml(field.label)}</span><textarea name=\"${escapeHtml(field.name)}\" rows=\"4\"${required}${field.placeholder ? ` placeholder=\"${escapeHtml(field.placeholder)}\"` : ''}></textarea></label>`;
   }
   if (type === 'file') {
-    return `<label class="${wrapper}"><span>${escapeHtml(field.label)}</span><input name="${escapeHtml(field.name)}" type="file" accept="image/*,application/pdf"><small>The file stays on this device; only its name and confirmed record details are stored for now.</small></label>`;
+    return `<label class=\"${wrapper}\"><span>${escapeHtml(field.label)}</span><input name=\"${escapeHtml(field.name)}\" type=\"file\" accept=\"image/*,application/pdf\"><small>The file stays on this device; only its name and confirmed record details are stored for now.</small></label>`;
   }
 
-  return `<label class="${wrapper}"><span>${escapeHtml(field.label)}</span><input name="${escapeHtml(field.name)}" type="${type}"${required}${field.placeholder ? ` placeholder="${escapeHtml(field.placeholder)}"` : ''}${value ? ` value="${escapeHtml(value)}"` : ''}${field.step ? ` step="${field.step}"` : ''}${field.min ? ` min="${field.min}"` : ''}></label>`;
+  return `<label class=\"${wrapper}\"><span>${escapeHtml(field.label)}</span><input name=\"${escapeHtml(field.name)}\" type=\"${type}\"${required}${field.placeholder ? ` placeholder=\"${escapeHtml(field.placeholder)}\"` : ''}${value ? ` value=\"${escapeHtml(value)}\"` : ''}${field.step ? ` step=\"${field.step}\"` : ''}${field.min ? ` min=\"${field.min}\"` : ''}></label>`;
 }
 
 function renderSavedRecords() {
   const records = loadCaptureRecords();
   if (!records.length) return '';
-  return `<section class="capture-local-records">
-    <div class="capture-local-head"><div><span class="eyebrow">Saved locally</span><strong>${records.length} record${records.length === 1 ? '' : 's'}</strong></div><small>Recent records · remove anything you no longer need</small></div>
-    <div class="capture-local-list">${records.slice(0, 8).map(record => {
+  return `<section class=\"capture-local-records\">
+    <div class=\"capture-local-head\"><div><span class=\"eyebrow\">Saved locally</span><strong>${records.length} record${records.length === 1 ? '' : 's'}</strong></div><small>Recent records · remove anything you no longer need</small></div>
+    <div class=\"capture-local-list\">${records.slice(0, 8).map(record => {
       const definition = definitionFor(record.kind);
-      return `<article class="capture-local-row" data-capture-record="${escapeHtml(record.id)}" style="--capture-accent:${definition.accent}">
-        <span class="capture-local-icon">${definition.icon}</span>
+      return `<article class=\"capture-local-row\" data-capture-record=\"${escapeHtml(record.id)}\" style=\"--capture-accent:${definition.accent}\">
+        <span class=\"capture-local-icon\">${definition.icon}</span>
         <div><strong>${escapeHtml(captureRecordSummary(record))}</strong><small>${escapeHtml(record.kind)} · ${escapeHtml(captureRecordDateLabel(record))}</small></div>
-        <button type="button" data-capture-delete="${escapeHtml(record.id)}">Remove</button>
+        <button type=\"button\" data-capture-delete=\"${escapeHtml(record.id)}\">Remove</button>
       </article>`;
     }).join('')}</div>
   </section>`;
@@ -247,14 +272,14 @@ function renderSavedRecords() {
 
 function renderSelection(stage: HTMLElement) {
   stage.dataset.captureView = 'menu';
-  stage.innerHTML = `<div class="capture-view capture-view-menu">
-    <header class="capture-pro-header">
-      <div><span class="eyebrow">Universal capture</span><h2>What would you like to add?</h2><p>Choose a record type. Family OS validates it, saves it locally, and updates the relevant views immediately.</p></div>
-      <button type="button" class="capture-icon-button" data-capture-close aria-label="Close">×</button>
+  stage.innerHTML = `<div class=\"capture-view capture-view-menu\">
+    <header class=\"capture-pro-header\">
+      <div><span class=\"eyebrow\">Universal capture</span><h2>What would you like to add?</h2><p>Choose a record type. Family OS validates it, saves it locally, and updates the relevant views immediately.</p></div>
+      <button type=\"button\" class=\"capture-icon-button\" data-capture-close aria-label=\"Close\">×</button>
     </header>
-    <div class="capture-option-grid">${captures.map(item => `<button type="button" class="capture-option" data-capture-kind="${item.kind}" style="--capture-accent:${item.accent}"><span class="capture-option-icon">${item.icon}</span><span><strong>${item.kind}</strong><small>${item.description}</small></span><b aria-hidden="true">›</b></button>`).join('')}</div>
+    <div class=\"capture-option-grid\">${captures.map(item => `<button type=\"button\" class=\"capture-option\" data-capture-kind=\"${item.kind}\" style=\"--capture-accent:${item.accent}\"><span class=\"capture-option-icon\">${item.icon}</span><span><strong>${item.kind}</strong><small>${item.description}</small></span><b aria-hidden=\"true\">›</b></button>`).join('')}</div>
     ${renderSavedRecords()}
-    <footer class="capture-pro-footer"><span>🔐 Local browser storage</span><span>Ready for future Google Calendar / cloud adapters</span></footer>
+    <footer class=\"capture-pro-footer\"><span>🔐 Local browser storage</span><span>Ready for future Google Calendar / cloud adapters</span></footer>
   </div>`;
 }
 
@@ -262,19 +287,19 @@ function renderForm(stage: HTMLElement, kind: CaptureKind) {
   const item = definitionFor(kind);
   stage.dataset.captureView = 'form';
   const dictation = kind === 'Speak'
-    ? `<div class="capture-dictation capture-field-wide"><button type="button" class="capture-dictate" data-capture-dictate>🎙 Start dictation</button><small>Uses browser speech recognition when available. You can always type instead.</small></div>`
+    ? `<div class=\"capture-dictation capture-field-wide\"><button type=\"button\" class=\"capture-dictate\" data-capture-dictate>🎙 Start dictation</button><small>Uses browser speech recognition when available. You can always type instead.</small></div>`
     : '';
-  stage.innerHTML = `<div class="capture-view capture-view-form" style="--capture-accent:${item.accent}">
-    <header class="capture-pro-header capture-form-header">
-      <button type="button" class="capture-icon-button capture-back" data-capture-back aria-label="Back">‹</button>
-      <div class="capture-form-heading"><span class="capture-form-icon">${item.icon}</span><div><span class="eyebrow">Add record</span><h2>${item.kind}</h2><p>${item.description}</p></div></div>
-      <button type="button" class="capture-icon-button" data-capture-close aria-label="Close">×</button>
+  stage.innerHTML = `<div class=\"capture-view capture-view-form\" style=\"--capture-accent:${item.accent}\">
+    <header class=\"capture-pro-header capture-form-header\">
+      <button type=\"button\" class=\"capture-icon-button capture-back\" data-capture-back aria-label=\"Back\">‹</button>
+      <div class=\"capture-form-heading\"><span class=\"capture-form-icon\">${item.icon}</span><div><span class=\"eyebrow\">Add record</span><h2>${item.kind}</h2><p>${item.description}</p></div></div>
+      <button type=\"button\" class=\"capture-icon-button\" data-capture-close aria-label=\"Close\">×</button>
     </header>
-    <form class="capture-form" data-capture-form data-capture-form-kind="${item.kind}" novalidate>
-      <div class="capture-validation-summary" data-capture-validation hidden></div>
+    <form class=\"capture-form\" data-capture-form data-capture-form-kind=\"${item.kind}\" novalidate>
+      <div class=\"capture-validation-summary\" data-capture-validation hidden></div>
       ${dictation}
-      <div class="capture-form-grid">${schemas[kind].map(renderField).join('')}</div>
-      <div class="capture-form-actions"><button type="button" class="capture-secondary" data-capture-back>Back</button><button type="submit" class="capture-save">Save ${item.kind}</button></div>
+      <div class=\"capture-form-grid\">${schemas[kind].map(renderField).join('')}</div>
+      <div class=\"capture-form-actions\"><button type=\"button\" class=\"capture-secondary\" data-capture-back>Back</button><button type=\"submit\" class=\"capture-save\">Save ${item.kind}</button></div>
     </form>
   </div>`;
 }
@@ -282,7 +307,7 @@ function renderForm(stage: HTMLElement, kind: CaptureKind) {
 function renderSuccess(stage: HTMLElement, kind: CaptureKind) {
   const item = definitionFor(kind);
   stage.dataset.captureView = 'success';
-  stage.innerHTML = `<div class="capture-view capture-success" style="--capture-accent:${item.accent}"><div class="capture-success-mark">✓</div><span class="eyebrow">Saved locally</span><h2>${item.kind} added</h2><p>The record is validated, persisted in this browser, and available to Family OS immediately.</p><div><button type="button" class="capture-secondary" data-capture-add-another>Add another</button><button type="button" class="capture-save" data-capture-close>Done</button></div></div>`;
+  stage.innerHTML = `<div class=\"capture-view capture-success\" style=\"--capture-accent:${item.accent}\"><div class=\"capture-success-mark\">✓</div><span class=\"eyebrow\">Saved locally</span><h2>${item.kind} added</h2><p>The record is validated, persisted in this browser, and available to Family OS immediately.</p><div><button type=\"button\" class=\"capture-secondary\" data-capture-add-another>Add another</button><button type=\"button\" class=\"capture-save\" data-capture-close>Done</button></div></div>`;
 }
 
 function formValues(form: HTMLFormElement) {
@@ -309,13 +334,13 @@ function showValidation(form: HTMLFormElement, errors: Record<string, string>) {
   }
 
   for (const [fieldName, message] of entries) {
-    const container = form.querySelector<HTMLElement>(`[data-capture-field="${CSS.escape(fieldName)}"]`);
+    const container = form.querySelector<HTMLElement>(`[data-capture-field=\"${CSS.escape(fieldName)}\"]`);
     container?.classList.add('capture-field-invalid');
-    if (container) container.insertAdjacentHTML('beforeend', `<small class="capture-field-error">${escapeHtml(message)}</small>`);
+    if (container) container.insertAdjacentHTML('beforeend', `<small class=\"capture-field-error\">${escapeHtml(message)}</small>`);
   }
 
   const firstName = entries[0]?.[0];
-  if (firstName) form.querySelector<HTMLElement>(`[name="${CSS.escape(firstName)}"]`)?.focus({ preventScroll: true });
+  if (firstName) form.querySelector<HTMLElement>(`[name=\"${CSS.escape(firstName)}\"]`)?.focus({ preventScroll: true });
 }
 
 function clearStageAnimationStyles(stage: HTMLElement) {
@@ -344,7 +369,7 @@ async function transitionStage(stage: HTMLElement, render: () => void, direction
 
 function setupDictation(stage: HTMLElement) {
   const button = stage.querySelector<HTMLButtonElement>('[data-capture-dictate]');
-  const textarea = stage.querySelector<HTMLTextAreaElement>('textarea[name="transcript"]');
+  const textarea = stage.querySelector<HTMLTextAreaElement>('textarea[name=\"transcript\"]');
   if (!button || !textarea) return;
   const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
   if (!Recognition) {
@@ -418,8 +443,6 @@ function bindStage(stage: HTMLElement) {
       return;
     }
 
-    // Record navigation is scoped to the actual menu button only. Forms use a
-    // different attribute, so clicks/focus on any field can never route here.
     const option = target.closest<HTMLButtonElement>('.capture-option[data-capture-kind]');
     if (!option?.dataset.captureKind) return;
     const kind = option.dataset.captureKind as CaptureKind;
@@ -461,7 +484,7 @@ function trapFocus(event: KeyboardEvent) {
     return;
   }
   if (event.key !== 'Tab') return;
-  const focusable = Array.from(activeHost.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'));
+  const focusable = Array.from(activeHost.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex=\"-1\"])'));
   if (!focusable.length) return;
   const first = focusable[0];
   const last = focusable[focusable.length - 1];
@@ -486,7 +509,7 @@ function enhanceOverlay(overlay: HTMLElement) {
 
   const host = document.createElement('div');
   host.className = 'capture-pro-host';
-  host.innerHTML = `<section class="capture-pro" role="dialog" aria-modal="true" aria-label="Universal capture"><div class="capture-pro-stage"></div></section>`;
+  host.innerHTML = `<section class=\"capture-pro\" role=\"dialog\" aria-modal=\"true\" aria-label=\"Universal capture\"><div class=\"capture-pro-stage\"></div></section>`;
   document.body.appendChild(host);
   activeHost = host;
 
