@@ -1,63 +1,29 @@
-const THEME_VALUES = new Set(['midnight', 'space', 'nature', 'soft']);
-
 let installed = false;
 let userSelectedTheme = false;
-let syncingDefault = false;
-
-function isThemeSelect(value: EventTarget | null): value is HTMLSelectElement {
-  if (!(value instanceof HTMLSelectElement)) return false;
-  const values = Array.from(value.options).map(option => option.value);
-  return values.includes('space') && values.includes('midnight');
-}
-
-function syncSettingsSelectToSpace() {
-  if (userSelectedTheme || syncingDefault) return;
-
-  const themeSelect = Array.from(document.querySelectorAll('select')).find(isThemeSelect);
-  if (!themeSelect || themeSelect.value === 'space') return;
-
-  syncingDefault = true;
-  themeSelect.value = 'space';
-  themeSelect.dispatchEvent(new Event('change', { bubbles: true }));
-  syncingDefault = false;
-  userSelectedTheme = true;
-}
 
 /**
- * Family OS currently keeps theme selection in React component state.
- * Until settings persistence is moved into the private Drive appDataFolder,
- * this bootstrap makes Space the true first-run default without storing
- * preferences in localStorage.
+ * Lightweight first-run Space paint. React still owns subsequent theme changes.
+ * This deliberately avoids MutationObserver/subtree scanning during startup.
  */
 export function installSpaceThemeDefault() {
   if (installed || typeof document === 'undefined') return;
   installed = true;
 
-  // Paint the first frame as Space before React finishes mounting.
   document.documentElement.dataset.theme = 'space';
 
   document.addEventListener('change', event => {
-    if (!syncingDefault && isThemeSelect(event.target)) {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement)) return;
+    const values = Array.from(target.options).map(option => option.value);
+    if (values.includes('space') && values.includes('midnight')) {
       userSelectedTheme = true;
     }
   }, true);
 
-  const observer = new MutationObserver(() => {
-    // App.tsx currently initializes its theme state to midnight. On first run,
-    // keep the DOM on Space until the Settings select mounts and we can sync
-    // React's state through its own change handler.
-    if (!userSelectedTheme && document.documentElement.dataset.theme === 'midnight') {
-      document.documentElement.dataset.theme = 'space';
-    }
-    syncSettingsSelectToSpace();
-  });
-
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-theme'],
-    childList: true,
-    subtree: true,
-  });
-
-  queueMicrotask(syncSettingsSelectToSpace);
+  // React currently initializes its theme state separately. Re-assert Space once
+  // after the initial effect cycle, then stop touching the theme unless the user
+  // changes it through Settings.
+  window.setTimeout(() => {
+    if (!userSelectedTheme) document.documentElement.dataset.theme = 'space';
+  }, 0);
 }
