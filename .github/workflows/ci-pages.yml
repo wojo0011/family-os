@@ -40,14 +40,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22
-      - name: Pin stable npm
-        run: npm install --global npm@10.8.2
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: yarn install --non-interactive --no-progress
       - name: Test
-        run: npm test
+        run: yarn test
       - name: Build
-        run: npm run build
+        run: yarn build
         env:
           VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
           VITE_OPENWEATHER_API_KEY: ${{ secrets.VITE_OPENWEATHER_API_KEY }}
@@ -99,10 +97,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22
-      - name: Pin stable npm
-        run: npm install --global npm@10.8.2
       - name: Install browser test driver
-        run: npm install --no-save --no-audit --no-fund puppeteer-core
+        run: yarn add --no-lock --ignore-scripts --non-interactive puppeteer-core
       - name: Exercise capture fields on live Pages site
         env:
           LIVE_URL: ${{ needs.deploy.outputs.page_url }}
