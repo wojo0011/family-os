@@ -4,6 +4,7 @@ import {
   captureRecordDateLabel,
   captureRecordSummary,
   removeCaptureRecord,
+  updateCaptureRecord,
   type CaptureRecord,
 } from './localCaptureStore';
 import {
@@ -19,12 +20,17 @@ import {
 } from './healthProviderStore';
 
 const PEOPLE: ProviderPerson[] = ['Family', 'Dad', 'Mom', 'Teen', 'Child'];
+const HEALTH_ENTRY_TYPES = ['Temperature', 'Symptom', 'Blood pressure', 'Heart rate', 'Weight', 'Doctor note', 'Other'] as const;
+const MEDICATION_STATUSES = ['Active', 'Paused', 'Completed'] as const;
+
 const EMPTY_PROVIDER: HealthProviderInput = {
   name: '', type: 'Family doctor', organization: '', person: 'Family', phone: '', email: '',
   address: '', website: '', lastVisitDate: '', followUpMonths: null, notes: '',
 };
 
 type HealthAlert = { id: string; icon: string; title: string; detail: string; level: 'now' | 'soon' | 'follow-up'; providerId?: string };
+type HealthRecordKind = 'Medication' | 'Health entry';
+type HealthRecordEditor = { kind: HealthRecordKind; record: CaptureRecord | null } | null;
 
 const isoDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
@@ -94,6 +100,16 @@ function typeIcon(type: HealthProviderType) {
   return '🩺';
 }
 
+function healthEntryIcon(type: string) {
+  if (type === 'Temperature') return '🌡';
+  if (type === 'Blood pressure') return '🫀';
+  if (type === 'Heart rate') return '♥';
+  if (type === 'Weight') return '⚖';
+  if (type === 'Doctor note') return '📝';
+  if (type === 'Symptom') return '✚';
+  return '●';
+}
+
 function followUpText(provider: HealthProvider) {
   if (!provider.lastVisitDate) return 'No last visit recorded';
   if (!provider.followUpMonths) return `Last visit ${provider.lastVisitDate}`;
@@ -105,6 +121,21 @@ function followUpText(provider: HealthProvider) {
   return `Follow-up in ${days} days`;
 }
 
+function medicationStatus(record: CaptureRecord) {
+  const explicit = record.values.status;
+  if (explicit === 'Paused' || explicit === 'Completed') return explicit;
+  const today = isoDate(new Date());
+  if (record.values.startDate && record.values.startDate > today) return 'Scheduled';
+  if (record.values.endDate && record.values.endDate < today) return 'Completed';
+  return 'Active';
+}
+
+function recordValues(form: HTMLFormElement) {
+  const values: Record<string, string> = {};
+  new FormData(form).forEach((value, key) => { values[key] = String(value); });
+  return values;
+}
+
 const normalizeWebsite = (value: string) => !value ? '' : value.includes('://') ? value : `https://${value}`;
 
 export default function HealthModule({ providers, records }: { providers: HealthProvider[]; records: CaptureRecord[] }) {
@@ -114,10 +145,14 @@ export default function HealthModule({ providers, records }: { providers: Health
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [appointmentProvider, setAppointmentProvider] = useState<HealthProvider | null>(null);
   const [appointmentErrors, setAppointmentErrors] = useState<Record<string, string>>({});
+  const [recordEditor, setRecordEditor] = useState<HealthRecordEditor>(null);
+  const [recordErrors, setRecordErrors] = useState<Record<string, string>>({});
   const [notificationState, setNotificationState] = useState(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
 
   const alerts = useMemo(() => buildAlerts(providers, records), [providers, records]);
-  const healthRecords = records.filter(record => record.kind === 'Medication' || record.kind === 'Health entry');
+  const medications = records.filter(record => record.kind === 'Medication');
+  const healthEntries = records.filter(record => record.kind === 'Health entry');
+  const activeMedications = medications.filter(record => medicationStatus(record) === 'Active').length;
 
   const openNew = () => { setMode('new'); setEditingProvider(null); setDraft(EMPTY_PROVIDER); setErrors({}); };
   const openEdit = (provider: HealthProvider) => {
@@ -145,20 +180,42 @@ export default function HealthModule({ providers, records }: { providers: Health
   };
 
   const saveAppointment = (form: HTMLFormElement) => {
-    const values: Record<string, string> = {};
-    new FormData(form).forEach((value, key) => { values[key] = String(value); });
-    const result = addCaptureRecord('Event', values);
+    const result = addCaptureRecord('Event', recordValues(form));
     if (!result.record) { setAppointmentErrors(result.validation.errors); return; }
     setAppointmentErrors({}); setAppointmentProvider(null);
   };
 
-  return <div className="stack health-module">
-    <header className="module-hero health-hero"><span className="eyebrow">Family OS · Health</span><h1>Health, appointments and providers.</h1><p>Keep reusable provider details, appointment context and follow-up reminders together. Provider data stays local until Google Contacts sync is connected.</p></header>
+  const saveHealthRecord = (form: HTMLFormElement) => {
+    if (!recordEditor) return;
+    const values = recordValues(form);
+    const result = recordEditor.record
+      ? updateCaptureRecord(recordEditor.record.id, values)
+      : addCaptureRecord(recordEditor.kind, values);
+    if (!result.record) {
+      setRecordErrors(result.validation?.errors ?? { form: 'Unable to save this record.' });
+      return;
+    }
+    setRecordErrors({});
+    setRecordEditor(null);
+  };
 
-    <section className="health-summary-grid">
+  const removeHealthRecord = (record: CaptureRecord) => {
+    if (!window.confirm(`Remove ${record.kind === 'Medication' ? record.values.medication || 'this medication' : record.values.entryType || 'this health record'}?`)) return;
+    removeCaptureRecord(record.id);
+    if (recordEditor?.record?.id === record.id) setRecordEditor(null);
+  };
+
+  const pharmacies = providers.filter(provider => provider.type === 'Pharmacy');
+  const clinicians = providers.filter(provider => provider.type !== 'Pharmacy');
+
+  return <div className="stack health-module">
+    <header className="module-hero health-hero"><span className="eyebrow">Family OS · Health</span><h1>Health, medications, appointments and providers.</h1><p>Keep reusable provider details, medication schedules, health readings and follow-up reminders together. Everything stays local until cloud sync is connected.</p></header>
+
+    <section className="health-summary-grid health-summary-grid-four">
       <article className="panel health-summary-card"><span>🩺</span><div><strong>{providers.length}</strong><small>Providers</small></div></article>
+      <article className="panel health-summary-card"><span>💊</span><div><strong>{activeMedications}</strong><small>Active medications</small></div></article>
+      <article className="panel health-summary-card"><span>🌡</span><div><strong>{healthEntries.length}</strong><small>Health records</small></div></article>
       <article className="panel health-summary-card"><span>🔔</span><div><strong>{alerts.length}</strong><small>Health reminders</small></div></article>
-      <article className="panel health-summary-card"><span>💊</span><div><strong>{healthRecords.length}</strong><small>Health records</small></div></article>
     </section>
 
     <section className="panel health-alert-panel">
@@ -167,18 +224,67 @@ export default function HealthModule({ providers, records }: { providers: Health
       <p className="health-notice">Follow-up intervals are personal reminder settings, not medical recommendations. Browser notifications currently work while Family OS is open; background push can be added with the future cloud service.</p>
     </section>
 
+    <section className="panel health-record-panel medication-panel">
+      <header><div><span className="eyebrow">Medication list</span><h2>Medications</h2><p>Track current medicines, directions, schedule, dates and provider context.</p></div><button className="primary" data-health-add-medication onClick={() => { setRecordErrors({}); setRecordEditor({ kind: 'Medication', record: null }); }}>+ Add medication</button></header>
+      {medications.length ? <div className="medication-grid">{medications.map(record => {
+        const status = medicationStatus(record);
+        return <article className="medication-card" key={record.id} data-health-medication-card>
+          <div className="medication-card-head"><span className="medication-icon">💊</span><div><span className={`health-status health-status-${status.toLowerCase()}`}>{status}</span><h3>{record.values.medication}</h3><small>{record.values.person || 'Family'}{record.values.time ? ` · ${record.values.time}` : ''}</small></div><button onClick={() => { setRecordErrors({}); setRecordEditor({ kind: 'Medication', record }); }}>Edit</button></div>
+          <p className="medication-directions">{record.values.directions}</p>
+          <div className="medication-meta"><span>Start · {record.values.startDate || '—'}</span><span>End · {record.values.endDate || 'Open-ended'}</span>{record.values.prescribedBy ? <span>Prescriber · {record.values.prescribedBy}</span> : null}{record.values.pharmacy ? <span>Pharmacy · {record.values.pharmacy}</span> : null}</div>
+          {record.values.notes ? <small className="medication-notes">{record.values.notes}</small> : null}
+        </article>;
+      })}</div> : <div className="health-empty"><span>💊</span><div><strong>No medications saved yet.</strong><small>Add a medication to keep its directions, schedule and dates with the rest of the family health record.</small></div></div>}
+    </section>
+
+    <section className="panel health-record-panel">
+      <header><div><span className="eyebrow">Health history</span><h2>Health records</h2><p>Save readings, symptoms and clinical notes as a searchable local history.</p></div><button className="primary" data-health-add-record onClick={() => { setRecordErrors({}); setRecordEditor({ kind: 'Health entry', record: null }); }}>+ Add health record</button></header>
+      {healthEntries.length ? <div className="health-entry-list">{healthEntries.map(record => <article className="health-entry-row" key={record.id} data-health-entry-row>
+        <span className="health-entry-icon">{healthEntryIcon(record.values.entryType)}</span>
+        <div><strong>{record.values.entryType || 'Health entry'} · {record.values.value}{record.values.unit ? ` ${record.values.unit}` : ''}</strong><small>{record.values.person || 'Family'} · {captureRecordDateLabel(record)}{record.values.time ? ` · ${record.values.time}` : ''}{record.values.provider ? ` · ${record.values.provider}` : ''}</small>{record.values.notes ? <p>{record.values.notes}</p> : null}</div>
+        <button onClick={() => { setRecordErrors({}); setRecordEditor({ kind: 'Health entry', record }); }}>Edit</button>
+      </article>)}</div> : <div className="health-empty"><span>🌡</span><div><strong>No health records saved yet.</strong><small>Add a temperature, symptom, blood pressure reading, weight, doctor note or another health entry.</small></div></div>}
+    </section>
+
     <section className="panel provider-panel">
-      <header><div><span className="eyebrow">Reusable contacts</span><h2>Providers</h2><p>Doctors, dentists, pharmacies, clinics and specialists.</p></div><button className="primary" onClick={openNew}>+ Add provider</button></header>
+      <header><div><span className="eyebrow">Reusable contacts</span><h2>Providers</h2><p>Doctors, dentists, pharmacies, clinics and specialists.</p></div><button className="primary" data-health-add-provider onClick={openNew}>+ Add provider</button></header>
       {providers.length ? <div className="provider-grid">{providers.map(provider => <article className="provider-card" key={provider.id}>
         <div className="provider-card-top"><span className="provider-icon">{typeIcon(provider.type)}</span><div><span className="eyebrow">{provider.type}</span><h3>{provider.name}</h3><small>{provider.organization || provider.person}</small></div><span className="provider-sync">{provider.sync.status === 'synced' ? '☁ Synced' : '○ Local'}</span></div>
         <div className="provider-contact-lines">{provider.phone ? <a href={`tel:${provider.phone}`}>☎ {provider.phone}</a> : null}{provider.email ? <a href={`mailto:${provider.email}`}>✉ {provider.email}</a> : null}{provider.address ? <span>⌖ {provider.address}</span> : null}{provider.website ? <a href={normalizeWebsite(provider.website)} target="_blank" rel="noreferrer">↗ Website</a> : null}</div>
         <div className="provider-follow-up"><strong>{followUpText(provider)}</strong><small>{provider.lastVisitDate ? `Last visit · ${provider.lastVisitDate}` : 'Add a last visit date to enable follow-up tracking'}{provider.followUpMonths ? ` · every ${provider.followUpMonths} months` : ''}</small></div>
         <div className="provider-actions"><button onClick={() => setAppointmentProvider(provider)}>📅 Appointment</button><button onClick={() => recordVisit(provider)}>✓ Record visit today</button><button onClick={() => openEdit(provider)}>Edit</button></div>
-      </article>)}</div> : <div className="provider-empty"><span>🩺</span><div><h3>Add your first provider</h3><p>Save contact details once, then reuse them for appointments and follow-up reminders.</p><button className="primary" onClick={openNew}>+ Add provider</button></div></div>}
+      </article>)}</div> : <div className="provider-empty"><span>🩺</span><div><h3>Add your first provider</h3><p>Save contact details once, then reuse them for appointments and follow-up reminders.</p><button className="primary" data-health-add-provider onClick={openNew}>+ Add provider</button></div></div>}
       <footer className="provider-sync-note"><span>🔐 Stored locally now</span><span>Google Contacts ready · resource name and etag fields are reserved for future sync</span></footer>
     </section>
 
-    <section className="panel local-records-panel"><header><div><span className="eyebrow">Health history</span><h2>Saved health records</h2></div><small>{healthRecords.length} record{healthRecords.length === 1 ? '' : 's'}</small></header>{healthRecords.length ? <div className="local-records-list">{healthRecords.slice(0, 20).map(record => <article className="local-record-row" key={record.id}><div><strong>{record.kind === 'Medication' ? '💊' : '🌡'} {captureRecordSummary(record)}</strong><small>{record.kind} · {captureRecordDateLabel(record)}</small></div><button className="local-record-delete" onClick={() => { if (window.confirm('Remove this health record?')) removeCaptureRecord(record.id); }}>Remove</button></article>)}</div> : <p className="note">No health records saved yet.</p>}</section>
+    {recordEditor ? <div className="health-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setRecordEditor(null); }}><section className="health-modal health-record-modal" role="dialog" aria-modal="true" data-health-record-modal aria-label={recordEditor.record ? `Edit ${recordEditor.kind}` : `Add ${recordEditor.kind}`}>
+      <header><div><span className="eyebrow">{recordEditor.record ? 'Edit health record' : 'New health record'}</span><h2>{recordEditor.kind === 'Medication' ? 'Medication' : 'Health entry'}</h2><p>{recordEditor.kind === 'Medication' ? 'Medication details are stored locally and can be edited any time.' : 'Save a dated reading, symptom or clinical note.'}</p></div><button onClick={() => setRecordEditor(null)} aria-label="Close">×</button></header>
+      <form onSubmit={event => { event.preventDefault(); saveHealthRecord(event.currentTarget); }}>
+        {recordErrors.form ? <div className="health-record-error-summary">{recordErrors.form}</div> : null}
+        {recordEditor.kind === 'Medication' ? <div className="health-form-grid">
+          <label><span>Medication</span><input name="medication" defaultValue={recordEditor.record?.values.medication || ''} placeholder="Medication name" />{recordErrors.medication ? <small className="health-field-error">{recordErrors.medication}</small> : null}</label>
+          <label><span>Status</span><select name="status" defaultValue={recordEditor.record?.values.status || 'Active'}>{MEDICATION_STATUSES.map(status => <option key={status}>{status}</option>)}</select></label>
+          <label className="wide"><span>Directions</span><input name="directions" defaultValue={recordEditor.record?.values.directions || ''} placeholder="1 tablet with food" />{recordErrors.directions ? <small className="health-field-error">{recordErrors.directions}</small> : null}</label>
+          <label><span>For</span><select name="person" defaultValue={recordEditor.record?.values.person || 'Family'}>{PEOPLE.map(person => <option key={person}>{person}</option>)}</select></label>
+          <label><span>Schedule time</span><input name="time" type="time" defaultValue={recordEditor.record?.values.time || '09:00'} />{recordErrors.time ? <small className="health-field-error">{recordErrors.time}</small> : null}</label>
+          <label><span>Start date</span><input name="startDate" type="date" defaultValue={recordEditor.record?.values.startDate || isoDate(new Date())} />{recordErrors.startDate ? <small className="health-field-error">{recordErrors.startDate}</small> : null}</label>
+          <label><span>End date</span><input name="endDate" type="date" defaultValue={recordEditor.record?.values.endDate || ''} />{recordErrors.endDate ? <small className="health-field-error">{recordErrors.endDate}</small> : null}</label>
+          <label><span>Prescribed by</span><select name="prescribedBy" defaultValue={recordEditor.record?.values.prescribedBy || ''}><option value="">Not linked</option>{clinicians.map(provider => <option key={provider.id} value={provider.name}>{provider.name}</option>)}</select></label>
+          <label><span>Pharmacy</span><select name="pharmacy" defaultValue={recordEditor.record?.values.pharmacy || ''}><option value="">Not linked</option>{pharmacies.map(provider => <option key={provider.id} value={provider.name}>{provider.name}</option>)}</select></label>
+          <label className="wide"><span>Notes</span><textarea name="notes" rows={4} defaultValue={recordEditor.record?.values.notes || ''} placeholder="Prescription details, refill information or other context…" /></label>
+        </div> : <div className="health-form-grid">
+          <label><span>Entry type</span><select name="entryType" defaultValue={recordEditor.record?.values.entryType || 'Temperature'}>{HEALTH_ENTRY_TYPES.map(type => <option key={type}>{type}</option>)}</select>{recordErrors.entryType ? <small className="health-field-error">{recordErrors.entryType}</small> : null}</label>
+          <label><span>Reading / value</span><input name="value" defaultValue={recordEditor.record?.values.value || ''} placeholder="e.g. 38.1 °C or 120/80" />{recordErrors.value ? <small className="health-field-error">{recordErrors.value}</small> : null}</label>
+          <label><span>Unit</span><input name="unit" defaultValue={recordEditor.record?.values.unit || ''} placeholder="Optional unit" /></label>
+          <label><span>For</span><select name="person" defaultValue={recordEditor.record?.values.person || 'Dad'}>{PEOPLE.filter(person => person !== 'Family').map(person => <option key={person}>{person}</option>)}</select>{recordErrors.person ? <small className="health-field-error">{recordErrors.person}</small> : null}</label>
+          <label><span>Date</span><input name="date" type="date" defaultValue={recordEditor.record?.values.date || isoDate(new Date())} />{recordErrors.date ? <small className="health-field-error">{recordErrors.date}</small> : null}</label>
+          <label><span>Time</span><input name="time" type="time" defaultValue={recordEditor.record?.values.time || '09:00'} />{recordErrors.time ? <small className="health-field-error">{recordErrors.time}</small> : null}</label>
+          <label className="wide"><span>Provider</span><select name="provider" defaultValue={recordEditor.record?.values.provider || ''}><option value="">Not linked</option>{providers.map(provider => <option key={provider.id} value={provider.name}>{provider.name} · {provider.type}</option>)}</select></label>
+          <label className="wide"><span>Notes</span><textarea name="notes" rows={4} defaultValue={recordEditor.record?.values.notes || ''} placeholder="Symptoms, context, treatment, questions for the doctor, etc." /></label>
+        </div>}
+        <footer><div>{recordEditor.record ? <button type="button" className="health-danger" onClick={() => removeHealthRecord(recordEditor.record!)}>Delete</button> : null}</div><div><button type="button" onClick={() => setRecordEditor(null)}>Cancel</button><button className="primary" type="submit">{recordEditor.record ? 'Save changes' : recordEditor.kind === 'Medication' ? 'Save medication' : 'Save health record'}</button></div></footer>
+      </form>
+    </section></div> : null}
 
     {mode ? <div className="health-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) closeProvider(); }}><section className="health-modal" role="dialog" aria-modal="true" aria-label={mode === 'new' ? 'Add provider' : 'Edit provider'}>
       <header><div><span className="eyebrow">{mode === 'new' ? 'New reusable contact' : 'Edit reusable contact'}</span><h2>{mode === 'new' ? 'Add provider' : draft.name}</h2></div><button onClick={closeProvider} aria-label="Close">×</button></header>
