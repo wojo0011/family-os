@@ -1,0 +1,8 @@
+.content > .stack[data-health-enhanced="true"] > :not(.health-module-host) {
+  display: none !important;
+}
+
+.health-module-host {
+  display: block;
+  width: 100%;
+}
