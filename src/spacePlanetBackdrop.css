@@ -1,0 +1,210 @@
+/* Layered Earth + Mars backdrop for the opt-in moon-base experience.
+   This is deliberately DOM/CSS rather than a second WebGL renderer so the app
+   keeps one GPU context and one Three.js animation loop. */
+
+.space-texture-planets {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.space-texture-planet {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  isolation: isolate;
+  transform: translateZ(0);
+  filter: saturate(1.05) contrast(1.04);
+}
+
+.space-texture-planet > span {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-repeat: repeat-x;
+  background-position: 0 50%;
+  background-size: 200% 100%;
+  pointer-events: none;
+}
+
+.space-texture-earth {
+  width: clamp(300px, 30vw, 520px);
+  right: clamp(-125px, -6vw, -45px);
+  top: clamp(18px, 5vh, 70px);
+  box-shadow:
+    0 0 32px rgba(75, 172, 255, .42),
+    0 0 105px rgba(67, 134, 255, .28),
+    0 0 180px rgba(44, 101, 226, .14);
+}
+
+.space-texture-earth .space-planet-surface {
+  background-image: var(--planet-surface);
+  animation: space-earth-rotate 72s linear infinite;
+}
+
+.space-texture-earth .space-planet-detail {
+  background-image: var(--planet-bump);
+  mix-blend-mode: soft-light;
+  opacity: .32;
+  animation: space-earth-rotate 72s linear infinite;
+}
+
+.space-texture-earth .space-planet-spec {
+  background-image: var(--planet-spec);
+  mix-blend-mode: screen;
+  opacity: .19;
+  animation: space-earth-rotate 72s linear infinite;
+}
+
+.space-texture-earth .space-planet-clouds {
+  background-image: var(--planet-clouds);
+  -webkit-mask-image: var(--planet-cloud-mask);
+  mask-image: var(--planet-cloud-mask);
+  -webkit-mask-size: 200% 100%;
+  mask-size: 200% 100%;
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+  mix-blend-mode: screen;
+  opacity: .58;
+  animation: space-earth-clouds 58s linear infinite;
+}
+
+.space-texture-mars {
+  width: clamp(190px, 18vw, 300px);
+  left: clamp(20px, 9vw, 145px);
+  top: clamp(90px, 13vh, 165px);
+  box-shadow:
+    0 0 26px rgba(255, 126, 77, .34),
+    0 0 82px rgba(206, 78, 44, .22);
+}
+
+.space-texture-mars .space-planet-surface {
+  background-image: var(--planet-surface);
+  animation: space-mars-rotate 96s linear infinite;
+}
+
+.space-texture-mars .space-planet-detail {
+  background-image: var(--planet-bump);
+  mix-blend-mode: multiply;
+  opacity: .22;
+  animation: space-mars-rotate 96s linear infinite;
+}
+
+.space-texture-mars .space-planet-normal {
+  background-image: var(--planet-normal);
+  mix-blend-mode: soft-light;
+  opacity: .3;
+  animation: space-mars-rotate 96s linear infinite;
+}
+
+.space-planet-lighting {
+  z-index: 8;
+  background:
+    radial-gradient(circle at 29% 24%, rgba(255,255,255,.26), transparent 11%),
+    radial-gradient(circle at 38% 39%, transparent 0 39%, rgba(0,0,0,.08) 54%, rgba(0,0,0,.72) 91%),
+    linear-gradient(105deg, rgba(255,255,255,.08), transparent 38%, rgba(0,0,0,.38) 74%, rgba(0,0,0,.76));
+  background-size: 100% 100%;
+  mix-blend-mode: multiply;
+}
+
+.space-texture-earth::after,
+.space-texture-mars::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: 50%;
+  box-shadow:
+    inset 22px 15px 34px rgba(255,255,255,.06),
+    inset -62px -28px 72px rgba(0,0,0,.62),
+    inset 0 0 0 1px rgba(255,255,255,.05);
+}
+
+/* Cover the old procedural placeholder planets beneath this layer so the
+   textured Earth/Mars become the only visually dominant worlds. */
+.space-texture-earth::before,
+.space-texture-mars::before {
+  content: "";
+  position: absolute;
+  inset: -34px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(7,8,23,.78) 45%, transparent 72%);
+  filter: blur(10px);
+}
+
+:root[data-space-panels-hidden="true"] .content > .stack {
+  opacity: 0;
+  transform: translateY(12px) scale(.992);
+  pointer-events: none;
+}
+
+.content > .stack {
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+@keyframes space-earth-rotate {
+  from { background-position: 0 50%; }
+  to { background-position: 200% 50%; }
+}
+
+@keyframes space-earth-clouds {
+  from {
+    background-position: 0 50%;
+    -webkit-mask-position: 0 50%;
+    mask-position: 0 50%;
+  }
+  to {
+    background-position: 200% 50%;
+    -webkit-mask-position: 200% 50%;
+    mask-position: 200% 50%;
+  }
+}
+
+@keyframes space-mars-rotate {
+  from { background-position: 0 50%; }
+  to { background-position: 200% 50%; }
+}
+
+@media (max-width: 1050px) {
+  .space-texture-earth {
+    width: clamp(260px, 34vw, 390px);
+    right: -100px;
+    top: 56px;
+  }
+
+  .space-texture-mars {
+    width: clamp(165px, 20vw, 235px);
+    left: 28px;
+    top: 150px;
+  }
+}
+
+@media (max-width: 720px) {
+  .space-texture-earth {
+    width: 260px;
+    right: -118px;
+    top: 74px;
+    opacity: .88;
+  }
+
+  .space-texture-mars {
+    width: 145px;
+    left: -36px;
+    top: 210px;
+    opacity: .86;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-texture-planet > span {
+    animation: none !important;
+  }
+
+  .content > .stack {
+    transition: none;
+  }
+}
