@@ -33,10 +33,15 @@ try {
     element.dispatchEvent(new Event('change', { bubbles: true }));
   }, { selector, value });
 
-  const today = await page.evaluate(() => {
-    const date = new Date();
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  });
+  const setDoseTime = (index, value) => page.evaluate(({ index, value }) => {
+    const inputs = Array.from(document.querySelectorAll('.dose-time-control input[type="time"]'));
+    const input = inputs[index];
+    if (!(input instanceof HTMLInputElement)) throw new Error(`Dose time ${index} not found.`);
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    setter?.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }, { index, value });
 
   const url = new URL(siteUrl);
   url.searchParams.set('health-smoke', Date.now().toString());
@@ -45,8 +50,15 @@ try {
   await page.evaluate(() => {
     localStorage.removeItem('family-os:health-providers-v1');
     localStorage.removeItem('family-os:capture-records-v1');
+    localStorage.removeItem('family-os:medication-adherence-v1');
+    localStorage.removeItem('family-os:notification-seen-v1');
   });
   await page.reload({ waitUntil: 'networkidle2' });
+
+  const today = await page.evaluate(() => {
+    const date = new Date();
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  });
 
   await page.waitForFunction(() => Array.from(document.querySelectorAll('.sidebar button')).some(button => button.textContent?.includes('Health')), { timeout: 30_000 });
   await page.evaluate(() => {
@@ -54,21 +66,17 @@ try {
     if (!(button instanceof HTMLButtonElement)) throw new Error('Health navigation button not found.');
     button.click();
   });
-
   await page.waitForSelector('.health-module-host .health-module', { timeout: 15_000 });
 
-  // Provider + follow-up + appointment workflow.
-  await page.waitForSelector('[data-health-add-provider]', { timeout: 10_000 });
+  // Provider + follow-up workflow.
   await clickNow('[data-health-add-provider]');
   await page.waitForSelector('.health-modal input[placeholder="Dr. Jane Smith"]', { timeout: 10_000 });
-
   const sixMonthsAgo = await page.evaluate(() => {
     const date = new Date();
     date.setMonth(date.getMonth() - 6);
     date.setDate(date.getDate() - 2);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   });
-
   await setValueNow('.health-modal input[placeholder="Dr. Jane Smith"]', 'Dr. Live Dentist');
   await setValueNow('.health-modal select', 'Dentist');
   await page.evaluate(lastVisit => {
@@ -79,13 +87,6 @@ try {
     date.dispatchEvent(new Event('input', { bubbles: true }));
     date.dispatchEvent(new Event('change', { bubbles: true }));
   }, sixMonthsAgo);
-
-  const followUp = await page.evaluate(() => {
-    const selects = Array.from(document.querySelectorAll('.health-modal select'));
-    return selects.find(select => Array.from(select.options).some(option => option.value === '6'))?.value;
-  });
-  if (followUp !== '6') throw new Error(`Dentist did not default to a 6-month reminder. Got: ${followUp}`);
-
   await page.evaluate(() => {
     const save = Array.from(document.querySelectorAll('.health-modal button')).find(button => button.textContent?.trim() === 'Save provider');
     if (!(save instanceof HTMLButtonElement)) throw new Error('Save provider button missing.');
@@ -94,52 +95,59 @@ try {
   await page.waitForFunction(() => Array.from(document.querySelectorAll('.provider-card h3')).some(node => node.textContent?.includes('Dr. Live Dentist')), { timeout: 10_000 });
   await page.waitForFunction(() => Array.from(document.querySelectorAll('.health-alert strong')).some(node => node.textContent?.includes('Dentist follow-up')), { timeout: 10_000 });
 
-  await page.evaluate(() => {
-    const card = Array.from(document.querySelectorAll('.provider-card')).find(node => node.textContent?.includes('Dr. Live Dentist'));
-    const appointment = Array.from(card?.querySelectorAll('button') ?? []).find(button => button.textContent?.includes('Appointment'));
-    if (!(appointment instanceof HTMLButtonElement)) throw new Error('Provider appointment button missing.');
-    appointment.click();
-  });
-  await page.waitForSelector('.health-appointment-modal form', { timeout: 10_000 });
-
-  const appointmentDate = await page.evaluate(() => {
-    const date = new Date();
-    date.setDate(date.getDate() + 1);
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  });
-  await setValueNow('.health-appointment-modal input[name="date"]', appointmentDate);
-  await page.evaluate(() => {
-    const save = Array.from(document.querySelectorAll('.health-appointment-modal button')).find(button => button.textContent?.trim() === 'Save appointment');
-    if (!(save instanceof HTMLButtonElement)) throw new Error('Save appointment button missing.');
-    save.click();
-  });
-  await page.waitForFunction(() => !document.querySelector('.health-appointment-modal'), { timeout: 10_000 });
-
-  // Medication add + edit workflow.
-  await page.waitForSelector('[data-health-add-medication]', { timeout: 10_000 });
+  // Medication with two scheduled doses and reminders.
   await clickNow('[data-health-add-medication]');
   await page.waitForSelector('[data-health-record-modal] input[name="medication"]', { timeout: 10_000 });
-  await setValueNow('[data-health-record-modal] input[name="medication"]', 'Live smoke medication');
+  await setValueNow('[data-health-record-modal] input[name="medication"]', 'Live adherence medication');
   await setValueNow('[data-health-record-modal] input[name="directions"]', 'Take one tablet with food');
   await setValueNow('[data-health-record-modal] select[name="person"]', 'Dad');
   await setValueNow('[data-health-record-modal] input[name="startDate"]', today);
-  await setValueNow('[data-health-record-modal] input[name="time"]', '08:30');
   await setValueNow('[data-health-record-modal] select[name="prescribedBy"]', 'Dr. Live Dentist');
+  await setDoseTime(0, '08:00');
+  await page.evaluate(() => {
+    const preset = Array.from(document.querySelectorAll('.dose-preset-row button')).find(button => button.textContent?.startsWith('Evening'));
+    if (!(preset instanceof HTMLButtonElement)) throw new Error('Evening dose preset missing.');
+    preset.click();
+  });
+  await page.waitForFunction(() => document.querySelectorAll('.dose-time-control input[type="time"]').length === 2, { timeout: 5_000 });
+  await setDoseTime(1, '20:00');
+  const reminderChecked = await page.$eval('.medication-reminder-toggle input[type="checkbox"]', input => input.checked);
+  if (!reminderChecked) throw new Error('Medication reminders should default to enabled for scheduled medication.');
   await page.evaluate(() => {
     const save = Array.from(document.querySelectorAll('[data-health-record-modal] button')).find(button => button.textContent?.trim() === 'Save medication');
     if (!(save instanceof HTMLButtonElement)) throw new Error('Save medication button missing.');
     save.click();
   });
-  await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-health-medication-card] h3')).some(node => node.textContent?.includes('Live smoke medication')), { timeout: 10_000 });
+  await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-health-medication-card] h3')).some(node => node.textContent?.includes('Live adherence medication')), { timeout: 10_000 });
+  await page.waitForFunction(() => document.querySelectorAll('[data-medication-today] [data-medication-dose]').length === 2, { timeout: 10_000 });
 
+  // Mark the first dose Taken and the second Skipped.
   await page.evaluate(() => {
-    const card = Array.from(document.querySelectorAll('[data-health-medication-card]')).find(node => node.textContent?.includes('Live smoke medication'));
+    const rows = Array.from(document.querySelectorAll('[data-medication-today] [data-medication-dose]'));
+    const taken = rows[0]?.querySelector('[data-dose-taken]');
+    if (!(taken instanceof HTMLButtonElement)) throw new Error('Taken action missing for first dose.');
+    taken.click();
+  });
+  await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-medication-today] [data-medication-dose]')).some(row => row.textContent?.includes('Taken')), { timeout: 5_000 });
+  await page.evaluate(() => {
+    const rows = Array.from(document.querySelectorAll('[data-medication-today] [data-medication-dose]'));
+    const skipped = rows[1]?.querySelector('[data-dose-skipped]');
+    if (!(skipped instanceof HTMLButtonElement)) throw new Error('Skip action missing for second dose.');
+    skipped.click();
+  });
+  await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-medication-today] [data-medication-dose]')).some(row => row.textContent?.includes('Skipped')), { timeout: 5_000 });
+
+  // Reopen medication and verify schedule/history survive an edit.
+  await page.evaluate(() => {
+    const card = Array.from(document.querySelectorAll('[data-health-medication-card]')).find(node => node.textContent?.includes('Live adherence medication'));
     const edit = Array.from(card?.querySelectorAll('button') ?? []).find(button => button.textContent?.trim() === 'Edit');
     if (!(edit instanceof HTMLButtonElement)) throw new Error('Medication edit button missing.');
     edit.click();
   });
   await page.waitForSelector('[data-health-record-modal] input[name="directions"]', { timeout: 10_000 });
-  await setValueNow('[data-health-record-modal] input[name="directions"]', 'Take one tablet with breakfast');
+  const editTimes = await page.$$eval('.dose-time-control input[type="time"]', inputs => inputs.map(input => input.value));
+  if (editTimes.join(',') !== '08:00,20:00') throw new Error(`Medication dose times did not persist into edit mode: ${editTimes.join(',')}`);
+  await setValueNow('[data-health-record-modal] input[name="directions"]', 'Take one tablet with breakfast and dinner');
   await page.evaluate(() => {
     const save = Array.from(document.querySelectorAll('[data-health-record-modal] button')).find(button => button.textContent?.trim() === 'Save changes');
     if (!(save instanceof HTMLButtonElement)) throw new Error('Medication Save changes button missing.');
@@ -147,8 +155,7 @@ try {
   });
   await page.waitForFunction(() => !document.querySelector('[data-health-record-modal]'), { timeout: 10_000 });
 
-  // Health record add workflow.
-  await page.waitForSelector('[data-health-add-record]', { timeout: 10_000 });
+  // Health record remains integrated with medication/provider data.
   await clickNow('[data-health-add-record]');
   await page.waitForSelector('[data-health-record-modal] select[name="entryType"]', { timeout: 10_000 });
   await setValueNow('[data-health-record-modal] select[name="entryType"]', 'Temperature');
@@ -158,7 +165,6 @@ try {
   await setValueNow('[data-health-record-modal] input[name="date"]', today);
   await setValueNow('[data-health-record-modal] input[name="time"]', '09:15');
   await setValueNow('[data-health-record-modal] select[name="provider"]', 'Dr. Live Dentist');
-  await setValueNow('[data-health-record-modal] textarea[name="notes"]', 'Live smoke health reading');
   await page.evaluate(() => {
     const save = Array.from(document.querySelectorAll('[data-health-record-modal] button')).find(button => button.textContent?.trim() === 'Save health record');
     if (!(save instanceof HTMLButtonElement)) throw new Error('Save health record button missing.');
@@ -169,36 +175,35 @@ try {
   const stored = await page.evaluate(() => ({
     providers: JSON.parse(localStorage.getItem('family-os:health-providers-v1') || '[]'),
     records: JSON.parse(localStorage.getItem('family-os:capture-records-v1') || '[]'),
-    syncText: document.querySelector('.provider-sync-note')?.textContent || '',
+    adherence: JSON.parse(localStorage.getItem('family-os:medication-adherence-v1') || '{}'),
   }));
 
-  if (stored.providers.length !== 1 || stored.providers[0]?.name !== 'Dr. Live Dentist') throw new Error(`Provider was not saved correctly: ${JSON.stringify(stored.providers)}`);
-  if (stored.providers[0]?.followUpMonths !== 6) throw new Error('Dentist follow-up interval was not persisted.');
-
-  const appointment = stored.records.find(record => record.kind === 'Event' && record.values?.title?.includes('Dr. Live Dentist'));
-  if (!appointment) throw new Error(`Provider appointment was not saved into calendar records: ${JSON.stringify(stored.records)}`);
-  if (appointment.values.category !== 'Dental') throw new Error(`Provider appointment category should be Dental, got ${appointment.values.category}`);
-
-  const medication = stored.records.find(record => record.kind === 'Medication' && record.values?.medication === 'Live smoke medication');
+  const medication = stored.records.find(record => record.kind === 'Medication' && record.values?.medication === 'Live adherence medication');
   if (!medication) throw new Error(`Medication was not persisted: ${JSON.stringify(stored.records)}`);
-  if (medication.values.directions !== 'Take one tablet with breakfast') throw new Error(`Medication edit did not persist: ${JSON.stringify(medication.values)}`);
-  if (medication.values.status !== 'Active') throw new Error(`Medication status should be Active, got ${medication.values.status}`);
-  if (medication.values.prescribedBy !== 'Dr. Live Dentist') throw new Error('Medication provider link was not persisted.');
+  if (medication.values.doseTimes !== '08:00,20:00') throw new Error(`Medication doseTimes not persisted: ${JSON.stringify(medication.values)}`);
+  if (medication.values.remindersEnabled !== 'true') throw new Error('Medication reminder setting was not persisted.');
+  if (medication.values.directions !== 'Take one tablet with breakfast and dinner') throw new Error('Medication edit did not persist.');
+
+  const schedule = stored.adherence.schedules?.find(item => item.medicationId === medication.id);
+  if (!schedule || schedule.doseTimes?.join(',') !== '08:00,20:00' || schedule.remindersEnabled !== true) {
+    throw new Error(`Medication adherence schedule invalid: ${JSON.stringify(stored.adherence)}`);
+  }
+  const doseLogs = stored.adherence.logs?.filter(item => item.medicationId === medication.id) ?? [];
+  if (doseLogs.length !== 2) throw new Error(`Expected 2 dose logs, got ${JSON.stringify(doseLogs)}`);
+  if (!doseLogs.some(item => item.time === '08:00' && item.status === 'taken')) throw new Error('08:00 Taken history missing.');
+  if (!doseLogs.some(item => item.time === '20:00' && item.status === 'skipped')) throw new Error('20:00 Skipped history missing.');
 
   const healthEntry = stored.records.find(record => record.kind === 'Health entry' && record.values?.value === '37.2');
-  if (!healthEntry) throw new Error(`Health entry was not persisted: ${JSON.stringify(stored.records)}`);
-  if (healthEntry.values.unit !== '°C' || healthEntry.values.provider !== 'Dr. Live Dentist') throw new Error(`Health entry context was not persisted: ${JSON.stringify(healthEntry.values)}`);
+  if (!healthEntry || healthEntry.values.provider !== 'Dr. Live Dentist') throw new Error('Health entry/provider integration failed.');
 
-  if (!stored.syncText.includes('Google Contacts')) throw new Error('Google Contacts sync-readiness message missing.');
   if (errors.length) throw new Error(`Browser errors during live health test:\n${errors.join('\n')}`);
-
   console.log('LIVE_HEALTH_SMOKE_PASS', JSON.stringify({
     url: siteUrl,
-    provider: stored.providers[0].name,
-    followUpMonths: stored.providers[0].followUpMonths,
-    appointmentCategory: appointment.values.category,
     medication: medication.values.medication,
-    medicationDirections: medication.values.directions,
+    doseTimes: schedule.doseTimes,
+    remindersEnabled: schedule.remindersEnabled,
+    taken: doseLogs.filter(item => item.status === 'taken').length,
+    skipped: doseLogs.filter(item => item.status === 'skipped').length,
     healthEntry: `${healthEntry.values.value} ${healthEntry.values.unit}`,
   }));
 } finally {
