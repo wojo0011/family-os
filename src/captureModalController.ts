@@ -2,6 +2,7 @@ import {
   addCaptureRecord,
   captureRecordDateLabel,
   captureRecordSummary,
+  EVENT_CATEGORIES,
   loadCaptureRecords,
   removeCaptureRecord,
   type CaptureKind,
@@ -38,7 +39,7 @@ type FieldDefinition = {
 const MOTION_URL = 'https://cdn.jsdelivr.net/npm/motion@11.11.13/+esm';
 
 const captures: CaptureDefinition[] = [
-  { kind: 'Event', icon: '📅', description: 'Time, place, person and notes', accent: '#65b8ff' },
+  { kind: 'Event', icon: '📅', description: 'Type, time, place, person and notes', accent: '#65b8ff' },
   { kind: 'Reminder', icon: '✓', description: 'A task with a due date or time', accent: '#53d7a6' },
   { kind: 'Expense', icon: '💵', description: 'Amount, merchant and category', accent: '#f4c95d' },
   { kind: 'Scan receipt', icon: '🧾', description: 'Attach a receipt and confirm details', accent: '#ffb66b' },
@@ -56,11 +57,11 @@ const personOptions = ['Family', 'Dad', 'Mom', 'Teen', 'Child'];
 const schemas: Record<CaptureKind, FieldDefinition[]> = {
   Event: [
     { label: 'Event title', name: 'title', required: true, placeholder: 'Family dinner' },
+    { label: 'Event type', name: 'category', type: 'select', options: [...EVENT_CATEGORIES] },
     { label: 'Who', name: 'person', type: 'select', options: personOptions },
     { label: 'Date', name: 'date', type: 'date', required: true, defaultValue: 'today' },
     { label: 'Time', name: 'time', type: 'time', required: true, defaultValue: 'nextHour' },
     { label: 'Location', name: 'location', placeholder: 'Optional location' },
-    { label: 'Type', name: 'category', type: 'select', options: ['Family', 'School', 'Sport', 'Appointment', 'Work', 'Other'] },
     { label: 'Notes', name: 'notes', type: 'textarea', placeholder: 'Anything the family should know…', wide: true },
   ],
   Reminder: [
