@@ -35,12 +35,12 @@ function addStyles() {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      border: 1px solid rgba(255,159,200,.36);
+      border: 1px solid rgba(255,190,214,.38);
       border-radius: 999px;
       padding: 10px 15px;
-      background: rgba(47,31,51,.92);
-      color: #fff7fb;
-      box-shadow: 0 14px 34px rgba(0,0,0,.28);
+      background: rgba(66,74,111,.82);
+      color: #fff9fc;
+      box-shadow: 0 14px 34px rgba(39,45,72,.28);
       backdrop-filter: blur(14px);
       font: 800 11px/1 system-ui, sans-serif;
       cursor: pointer;
@@ -49,19 +49,19 @@ function addStyles() {
     .family-os-soft-launcher:hover:not(:disabled),
     .family-os-soft-panel-toggle:hover:not(:disabled) {
       transform: translateY(-1px);
-      border-color: rgba(205,179,255,.74);
-      background: rgba(58,40,63,.97);
+      border-color: rgba(183,224,255,.72);
+      background: rgba(77,86,127,.9);
     }
     .family-os-soft-launcher:disabled { cursor: default; opacity: .82; }
     .family-os-soft-launcher[data-state="active"] {
-      border-color: rgba(255,217,174,.56);
-      background: rgba(62,42,66,.97);
+      border-color: rgba(255,219,230,.62);
+      background: rgba(77,83,123,.9);
     }
     .family-os-soft-panel-toggle { display: none; }
     .family-os-soft-panel-toggle.is-visible { display: inline-flex; }
     .family-os-soft-panel-toggle[aria-pressed="true"] {
-      border-color: rgba(205,179,255,.7);
-      background: rgba(66,45,72,.98);
+      border-color: rgba(183,224,255,.7);
+      background: rgba(72,83,124,.94);
     }
     @media (max-width:720px) {
       .family-os-soft-actions { right: 14px; bottom: 126px; gap: 6px; }
@@ -92,7 +92,7 @@ function setPanelsHidden(hidden: boolean) {
   panelButton.textContent = hidden ? '▣ Show Today panels' : '◫ Hide Today panels';
   panelButton.title = hidden
     ? 'Restore the Today dashboard panels.'
-    : 'Hide the Today dashboard to view the Soft Atelier.';
+    : 'Hide the Today dashboard to view the Soft Cloudscape.';
 }
 
 function resetLauncher() {
@@ -103,8 +103,8 @@ function resetLauncher() {
   if (launchButton) {
     launchButton.disabled = false;
     launchButton.dataset.state = 'ready';
-    launchButton.textContent = '🌸 Launch Soft Atelier';
-    launchButton.title = 'Load the premium Soft 3D atelier. 3D is never started automatically.';
+    launchButton.textContent = '☁️ Launch Soft Cloudscape';
+    launchButton.title = 'Load the premium pastel 3D cloudscape. 3D is never started automatically.';
   }
   panelButton?.classList.remove('is-visible');
   if (panelButton) panelButton.setAttribute('aria-pressed', 'false');
@@ -132,7 +132,7 @@ async function launchSoft() {
   starting = true;
   launchButton.disabled = true;
   launchButton.dataset.state = 'starting';
-  launchButton.textContent = '◌ Preparing atelier…';
+  launchButton.textContent = '◌ Forming clouds…';
 
   try {
     if (!webGL2Available()) throw new Error('WebGL 2 is not available in this browser.');
@@ -154,17 +154,17 @@ async function launchSoft() {
 
     started = true;
     launchButton.dataset.state = 'active';
-    launchButton.textContent = '✓ Soft Atelier active';
-    launchButton.title = 'Soft Atelier is active. Switch themes or refresh to close it.';
+    launchButton.textContent = '✓ Soft Cloudscape active';
+    launchButton.title = 'Soft Cloudscape is active. Switch themes or refresh to close it.';
     panelButton?.classList.add('is-visible');
     setPanelsHidden(false);
   } catch (error) {
-    console.error('Family OS Soft Atelier launch failed.', error);
+    console.error('Family OS Soft Cloudscape launch failed.', error);
     starting = false;
     launchButton.disabled = false;
     launchButton.dataset.state = 'error';
-    launchButton.textContent = '⚠ Soft Atelier unavailable · retry';
-    launchButton.title = error instanceof Error ? error.message : 'Soft Atelier could not start.';
+    launchButton.textContent = '⚠ Soft Cloudscape unavailable · retry';
+    launchButton.title = error instanceof Error ? error.message : 'Soft Cloudscape could not start.';
     return;
   }
 
@@ -190,8 +190,8 @@ export function installSoft3DLauncher() {
   launchButton.type = 'button';
   launchButton.className = 'family-os-soft-launcher';
   launchButton.dataset.state = 'ready';
-  launchButton.textContent = '🌸 Launch Soft Atelier';
-  launchButton.title = 'Load the premium Soft 3D atelier. 3D is never started automatically.';
+  launchButton.textContent = '☁️ Launch Soft Cloudscape';
+  launchButton.title = 'Load the premium pastel 3D cloudscape. 3D is never started automatically.';
   launchButton.addEventListener('click', () => void launchSoft());
 
   actions.append(panelButton, launchButton);
