@@ -112,8 +112,10 @@ function resetLauncher() {
 
 function syncVisibility() {
   if (!actions) return;
-  const visible = document.documentElement.dataset.theme === 'midnight' && Boolean(findTodayHost());
+  const isMidnight = document.documentElement.dataset.theme === 'midnight';
+  const visible = isMidnight && Boolean(findTodayHost());
   actions.classList.toggle('is-visible', visible);
+  if (!isMidnight && (started || starting || panelsHidden)) resetLauncher();
 }
 
 function queueSync() {
@@ -139,7 +141,16 @@ async function launchMidnight() {
 
     await import('./midnightCityExperience.css');
     const { launchMidnightCityExperience } = await import('./midnightCityExperience');
+    if (document.documentElement.dataset.theme !== 'midnight' || !findTodayHost()) {
+      resetLauncher();
+      return;
+    }
     await launchMidnightCityExperience();
+
+    if (document.documentElement.dataset.theme !== 'midnight') {
+      resetLauncher();
+      return;
+    }
 
     started = true;
     launchButton.dataset.state = 'active';
