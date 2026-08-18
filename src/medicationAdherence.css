@@ -1,0 +1,350 @@
+.medication-today-panel {
+  padding: 20px;
+}
+
+.medication-today-panel > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.medication-today-panel h2 {
+  margin: 3px 0 4px;
+}
+
+.medication-today-panel header p {
+  margin: 0;
+  opacity: .68;
+  max-width: 720px;
+}
+
+.dose-summary-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.dose-summary-pills > span,
+.medication-dose-chips > span {
+  border: 1px solid color-mix(in srgb, var(--text, #fff) 10%, transparent);
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: .72rem;
+  background: color-mix(in srgb, var(--panel, #151923) 78%, transparent);
+}
+
+.dose-summary-taken,
+.medication-dose-chips .reminders-on {
+  border-color: color-mix(in srgb, #53d7a6 42%, transparent) !important;
+  background: color-mix(in srgb, #53d7a6 12%, transparent) !important;
+}
+
+.dose-summary-skipped {
+  border-color: color-mix(in srgb, #ff9cae 38%, transparent) !important;
+}
+
+.today-dose-list {
+  display: grid;
+  gap: 9px;
+}
+
+.today-dose-row {
+  display: grid;
+  grid-template-columns: 78px auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 13px;
+  border: 1px solid color-mix(in srgb, var(--text, #fff) 9%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel, #151923) 76%, transparent);
+}
+
+.today-dose-row > time {
+  font-weight: 800;
+  font-size: .86rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dose-pill-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #a78bfa 14%, transparent);
+}
+
+.today-dose-main strong,
+.today-dose-main small {
+  display: block;
+}
+
+.today-dose-main small {
+  margin-top: 3px;
+  opacity: .66;
+  line-height: 1.35;
+}
+
+.dose-state-label {
+  min-width: 70px;
+  text-align: center;
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: .68rem;
+  font-weight: 800;
+  background: color-mix(in srgb, var(--text, #fff) 7%, transparent);
+}
+
+.dose-state-taken {
+  border-left: 3px solid #53d7a6;
+}
+
+.dose-state-taken .dose-state-label {
+  color: #8ee7c5;
+  background: color-mix(in srgb, #53d7a6 12%, transparent);
+}
+
+.dose-state-skipped {
+  border-left: 3px solid #ff9cae;
+}
+
+.dose-state-skipped .dose-state-label {
+  color: #ffb1bf;
+  background: color-mix(in srgb, #ff9cae 11%, transparent);
+}
+
+.dose-state-due {
+  border-left: 3px solid #f4c95d;
+}
+
+.dose-state-due .dose-state-label {
+  color: #f6d981;
+  background: color-mix(in srgb, #f4c95d 11%, transparent);
+}
+
+.dose-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.dose-actions button {
+  padding: 7px 10px;
+  font-size: .72rem;
+}
+
+.dose-taken {
+  border-color: color-mix(in srgb, #53d7a6 30%, transparent) !important;
+}
+
+.dose-skipped {
+  color: #ffb1bf;
+}
+
+.dose-history {
+  margin-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--text, #fff) 8%, transparent);
+  padding-top: 12px;
+}
+
+.dose-history summary {
+  cursor: pointer;
+  font-size: .78rem;
+  font-weight: 800;
+  opacity: .76;
+}
+
+.dose-history-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.dose-history-list article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text, #fff) 4%, transparent);
+}
+
+.dose-history-list strong,
+.dose-history-list small {
+  display: block;
+}
+
+.dose-history-list small {
+  margin-top: 2px;
+  opacity: .62;
+}
+
+.dose-history-taken,
+.dose-history-skipped {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.dose-history-taken {
+  background: color-mix(in srgb, #53d7a6 16%, transparent);
+  color: #8ee7c5;
+}
+
+.dose-history-skipped {
+  background: color-mix(in srgb, #ff9cae 14%, transparent);
+  color: #ffb1bf;
+}
+
+.medication-dose-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 11px 0;
+}
+
+.medication-schedule-editor {
+  border: 1px solid color-mix(in srgb, var(--text, #fff) 10%, transparent);
+  border-radius: 14px;
+  padding: 13px;
+  background: color-mix(in srgb, #a78bfa 5%, transparent);
+}
+
+.medication-schedule-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.medication-schedule-head span,
+.medication-schedule-head small {
+  display: block;
+}
+
+.medication-schedule-head span {
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.medication-schedule-head small {
+  margin-top: 3px;
+  opacity: .62;
+}
+
+.medication-schedule-head button,
+.dose-preset-row button {
+  padding: 7px 9px;
+  font-size: .7rem;
+}
+
+.dose-time-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.dose-time-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px;
+}
+
+.dose-time-control button {
+  width: 34px;
+  padding: 0;
+}
+
+.dose-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.medication-reminder-toggle {
+  display: flex !important;
+  grid-template-columns: none !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px !important;
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid color-mix(in srgb, var(--text, #fff) 8%, transparent);
+}
+
+.medication-reminder-toggle input {
+  width: 18px !important;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.medication-reminder-toggle span {
+  font-size: .75rem !important;
+}
+
+.medication-prn-note {
+  padding: 13px;
+  border: 1px dashed color-mix(in srgb, var(--text, #fff) 14%, transparent);
+  border-radius: 13px;
+}
+
+.medication-prn-note strong,
+.medication-prn-note small {
+  display: block;
+}
+
+.medication-prn-note small {
+  margin-top: 4px;
+  opacity: .62;
+}
+
+@media (max-width: 900px) {
+  .medication-today-panel > header {
+    flex-direction: column;
+  }
+  .dose-summary-pills {
+    justify-content: flex-start;
+  }
+  .today-dose-row {
+    grid-template-columns: 64px auto minmax(0, 1fr) auto;
+  }
+  .dose-actions {
+    grid-column: 3 / -1;
+  }
+  .dose-time-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .today-dose-row {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+  .today-dose-row > time {
+    grid-column: 1;
+  }
+  .dose-state-label {
+    grid-column: 3;
+    justify-self: start;
+  }
+  .dose-actions {
+    grid-column: 1 / -1;
+  }
+  .dose-actions button {
+    flex: 1;
+  }
+  .dose-time-grid {
+    grid-template-columns: 1fr;
+  }
+  .medication-schedule-head {
+    flex-direction: column;
+  }
+}
