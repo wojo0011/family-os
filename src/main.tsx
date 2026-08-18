@@ -3,15 +3,16 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { installWeatherIconCompatibility } from './weatherIconCompatibility';
 import { installThemeFavicon } from './themeFavicon';
+import { installSpace3DLauncher } from './space3DLauncher';
 import './styles.css';
 import './enhancements.css';
 import './weather.css';
 
-// Emergency recovery boot: render the application shell with no Three.js,
-// no animated Space scene, no panel observer and no theme bootstrap observer.
-// Decorative experiences can be reintroduced later behind explicit opt-in.
+// Recovery-first boot: the application shell stays lightweight. No Three.js,
+// WebGL, planet textures, rover scene or animated Space ambience starts here.
 installWeatherIconCompatibility();
 installThemeFavicon();
+installSpace3DLauncher();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Family OS root element is missing.');
@@ -22,6 +23,7 @@ createRoot(rootElement).render(
   </StrictMode>,
 );
 
+// Dismiss the fail-open loader as soon as the React shell has painted twice.
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {
     window.dispatchEvent(new CustomEvent('family-os:app-ready'));
