@@ -1,0 +1,10 @@
+/* Match Health's primary health-record action to Today's "+ Add something" CTA. */
+[data-health-add-record] {
+  border: 0 !important;
+  background: linear-gradient(135deg, var(--accent), var(--accent2)) !important;
+  color: #06111c !important;
+  font-weight: 800;
+  border-radius: 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+}
