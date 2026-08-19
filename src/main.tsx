@@ -27,6 +27,7 @@ import './captureModal.css';
 import './captureRecords.css';
 import './calendarPlanner.css';
 import './healthModule.css';
+import './healthPrimaryCta.css';
 import './healthModuleMount.css';
 import './medicationAdherence.css';
 import './moneyModule.css';
