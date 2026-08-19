@@ -52,7 +52,7 @@ export default function FamilyLensModule() {
         <header><span className="family-lens-card-icon">{lens.emoji}</span><div><span className="eyebrow">{lens.audience}</span><h3>{lens.name}</h3></div>{selected && <b>Active</b>}</header>
         <p>{lens.description}</p><div className="family-lens-access"><strong>Shows</strong><div>{lens.includes.map(item => <span key={item}>✓ {item}</span>)}</div></div>
         {lens.excludes.length > 0 && <div className="family-lens-hidden"><strong>Filtered from this view</strong><small>{lens.excludes.join(' · ')}</small></div>}
-        <button type="button" className={selected ? 'family-lens-selected' : 'primary'} disabled={selected} data-family-lens-use={lens.id} onClick={() => { if (switchAppLens(lens.id)) setActiveLens(lens.id); }}>{selected ? 'Current lens' : `Use ${lens.name} lens`}</button>
+        <button type="button" className={`primary family-lens-action ${selected ? 'is-current' : ''}`} disabled={selected} data-family-lens-use={lens.id} onClick={() => { if (switchAppLens(lens.id)) setActiveLens(lens.id); }}>{selected ? 'Current lens' : `Use ${lens.name} lens`}</button>
       </article>;
     })}</section>
     <section className="panel family-lens-explainer"><div className="family-lens-explainer-icon">🔐</div><div><span className="eyebrow">Privacy model</span><h2>Lens filtering is not authentication.</h2><p>Family lenses change what Family OS presents in Today and Calendar. They are a viewing convenience, not a security boundary. Real protection for private data must come from account permissions and the future Family Vault/cloud authorization layer.</p></div></section>
