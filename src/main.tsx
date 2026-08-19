@@ -17,8 +17,9 @@ import { installVehicleModuleEnhancement } from './vehicleModuleEnhancement';
 import { installPetModuleEnhancement } from './petModuleEnhancement';
 import { installRecurrenceCaptureEnhancement } from './recurrenceCaptureEnhancement';
 import { installRecurringCalendarEnhancement } from './recurringCalendarEnhancement';
-import { installRecurringNotificationEnhancement } from './recurringNotificationEnhancement';
 import { installRecurringTodayEnhancement } from './recurringTodayEnhancement';
+import { installRecurringNotificationEnhancement } from './recurringNotificationEnhancement';
+import { installFamilyLensModuleEnhancement } from './familyLensModuleEnhancement';
 import './styles.css';
 import './enhancements.css';
 import './weather.css';
@@ -36,6 +37,7 @@ import './vehicleModule.css';
 import './vehicleModuleMount.css';
 import './petModule.css';
 import './petModuleMount.css';
+import './familyLensModule.css';
 
 // Recovery-first boot: the application shell stays lightweight. No Three.js,
 // WebGL, planet textures, rover scene, city skyline, Nature or Soft scene starts here.
@@ -49,14 +51,15 @@ installCaptureModalController();
 installRecurrenceCaptureEnhancement();
 installCalendarPlannerEnhancement();
 installRecurringCalendarEnhancement();
-installRecurringTodayEnhancement();
 installHealthModuleEnhancement();
 installMoneyModuleEnhancement();
 installHomeModuleEnhancement();
 installVehicleModuleEnhancement();
 installPetModuleEnhancement();
-installHealthNotificationEngine();
+installFamilyLensModuleEnhancement();
+installRecurringTodayEnhancement();
 installRecurringNotificationEnhancement();
+installHealthNotificationEngine();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Family OS root element is missing.');
@@ -67,7 +70,6 @@ createRoot(rootElement).render(
   </StrictMode>,
 );
 
-// Dismiss the fail-open loader as soon as the React shell has painted twice.
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {
     window.dispatchEvent(new CustomEvent('family-os:app-ready'));
