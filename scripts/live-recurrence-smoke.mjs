@@ -56,6 +56,13 @@ try {
     await page.waitForSelector(`form[data-capture-form-kind="${kind}"]`, { timeout: 10_000 });
   }
 
+  async function saveAndClose(kind) {
+    await page.click(`form[data-capture-form-kind="${kind}"] .capture-save`);
+    await page.waitForSelector('.capture-success [data-capture-close]', { timeout: 10_000 });
+    await page.click('.capture-success [data-capture-close]');
+    await page.waitForFunction(() => !document.querySelector('.capture-pro-host'), { timeout: 10_000 });
+  }
+
   async function assertSimpleRecurrenceOptions(kind) {
     const options = await page.$$eval(`form[data-capture-form-kind="${kind}"] select[name="recurrence"] option`, nodes => nodes.map(node => node.textContent));
     for (const expected of ['Does not repeat', 'Weekly', 'Biweekly', 'Monthly', 'Yearly']) {
@@ -71,8 +78,7 @@ try {
   await setValue('form[data-capture-form-kind="Event"] select[name="person"]', 'Family');
   await setValue('form[data-capture-form-kind="Event"] select[name="category"]', 'Family');
   await setValue('form[data-capture-form-kind="Event"] select[name="recurrence"]', 'Weekly');
-  await page.click('form[data-capture-form-kind="Event"] .capture-save');
-  await page.waitForFunction(() => !document.querySelector('.capture-pro-host'), { timeout: 10_000 }).catch(() => undefined);
+  await saveAndClose('Event');
   await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-recurring-injected] strong')).filter(node => node.textContent?.includes('Weekly family event smoke')).length >= 2, { timeout: 15_000 });
 
   await openCapture('Reminder');
@@ -83,7 +89,7 @@ try {
   await setValue('form[data-capture-form-kind="Reminder"] select[name="person"]', 'Family');
   await setValue('form[data-capture-form-kind="Reminder"] select[name="priority"]', 'Normal');
   await setValue('form[data-capture-form-kind="Reminder"] select[name="recurrence"]', 'Biweekly');
-  await page.click('form[data-capture-form-kind="Reminder"] .capture-save');
+  await saveAndClose('Reminder');
   await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-recurring-injected] strong')).some(node => node.textContent?.includes('Biweekly reminder smoke')), { timeout: 15_000 });
 
   await openCapture('Bill');
@@ -97,7 +103,7 @@ try {
   await setValue('form[data-capture-form-kind="Bill"] select[name="person"]', 'Family');
   await setValue('form[data-capture-form-kind="Bill"] select[name="status"]', 'Unpaid');
   await setValue('form[data-capture-form-kind="Bill"] select[name="autopay"]', 'No');
-  await page.click('form[data-capture-form-kind="Bill"] .capture-save');
+  await saveAndClose('Bill');
 
   await page.waitForSelector('[data-planner-nav="next"]');
   await page.click('[data-planner-nav="next"]');
