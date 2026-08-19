@@ -3,8 +3,8 @@
   border: 0 !important;
   background: linear-gradient(135deg, var(--accent), var(--accent2)) !important;
   color: #06111c !important;
-  font-weight: 800;
-  border-radius: 10px;
-  padding: 9px 12px;
-  cursor: pointer;
+  font-weight: 800 !important;
+  border-radius: 10px !important;
+  padding: 9px 12px !important;
+  cursor: pointer !important;
 }
