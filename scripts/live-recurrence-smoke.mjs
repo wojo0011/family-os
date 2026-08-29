@@ -79,7 +79,8 @@ try {
   await setValue('form[data-capture-form-kind="Event"] select[name="category"]', 'Family');
   await setValue('form[data-capture-form-kind="Event"] select[name="recurrence"]', 'Weekly');
   await saveAndClose('Event');
-  await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-recurring-injected] strong')).filter(node => node.textContent?.includes('Weekly family event smoke')).length >= 2, { timeout: 15_000 });
+  // One generated occurrence is sufficient: near month-end the 42-day grid may only contain one future weekly repeat.
+  await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-recurring-injected] strong')).filter(node => node.textContent?.includes('Weekly family event smoke')).length >= 1, { timeout: 15_000 });
 
   await openCapture('Reminder');
   await assertSimpleRecurrenceOptions('Reminder');
