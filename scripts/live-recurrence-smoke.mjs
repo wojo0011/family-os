@@ -79,7 +79,6 @@ try {
   await setValue('form[data-capture-form-kind="Event"] select[name="category"]', 'Family');
   await setValue('form[data-capture-form-kind="Event"] select[name="recurrence"]', 'Weekly');
   await saveAndClose('Event');
-  // One generated occurrence is sufficient: near month-end the 42-day grid may only contain one future weekly repeat.
   await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-recurring-injected] strong')).filter(node => node.textContent?.includes('Weekly family event smoke')).length >= 1, { timeout: 15_000 });
 
   await openCapture('Reminder');
@@ -91,7 +90,6 @@ try {
   await setValue('form[data-capture-form-kind="Reminder"] select[name="priority"]', 'Normal');
   await setValue('form[data-capture-form-kind="Reminder"] select[name="recurrence"]', 'Biweekly');
   await saveAndClose('Reminder');
-  await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-recurring-injected] strong')).some(node => node.textContent?.includes('Biweekly reminder smoke')), { timeout: 15_000 });
 
   await openCapture('Bill');
   const billOptions = await page.$$eval('form[data-capture-form-kind="Bill"] select[name="recurrence"] option', nodes => nodes.map(node => node.textContent));
@@ -108,6 +106,7 @@ try {
 
   await page.waitForSelector('[data-planner-nav="next"]');
   await page.click('[data-planner-nav="next"]');
+  await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-recurring-injected] strong')).some(node => node.textContent?.includes('Biweekly reminder smoke')), { timeout: 15_000 });
   await page.waitForFunction(() => Array.from(document.querySelectorAll('[data-recurring-injected] strong')).some(node => node.textContent?.includes('Monthly bill smoke')), { timeout: 15_000 });
 
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('family-os:capture-records-v1') || '[]'));
