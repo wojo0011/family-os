@@ -103,6 +103,16 @@
 }
 .google-scope-row button:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
 .google-scope-ok { color: var(--accent2); font-weight: 900; }
+.google-account-error {
+  margin: 10px 0 0;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, #ff9cae 28%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, #ff9cae 8%, transparent);
+  color: #ffb4c0;
+  font-size: 9px;
+  line-height: 1.4;
+}
 .google-account-menu footer {
   margin-top: 12px;
   padding-top: 12px;
