@@ -20,6 +20,7 @@ import { installRecurringCalendarEnhancement } from './recurringCalendarEnhancem
 import { installRecurringTodayEnhancement } from './recurringTodayEnhancement';
 import { installRecurringNotificationEnhancement } from './recurringNotificationEnhancement';
 import { installFamilyLensModuleEnhancement } from './familyLensModuleEnhancement';
+import { installGoogleAuthEnhancement } from './googleAuthEnhancement';
 import './styles.css';
 import './enhancements.css';
 import './weather.css';
@@ -39,6 +40,7 @@ import './vehicleModuleMount.css';
 import './petModule.css';
 import './petModuleMount.css';
 import './familyLensModule.css';
+import './googleAuth.css';
 
 // Recovery-first boot: the application shell stays lightweight. No Three.js,
 // WebGL, planet textures, rover scene, city skyline, Nature or Soft scene starts here.
@@ -48,6 +50,7 @@ installSpace3DLauncher();
 installMidnight3DLauncher();
 installNature3DLauncher();
 installSoft3DLauncher();
+installGoogleAuthEnhancement();
 installCaptureModalController();
 installRecurrenceCaptureEnhancement();
 installCalendarPlannerEnhancement();
