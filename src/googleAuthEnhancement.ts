@@ -222,9 +222,11 @@ export function installGoogleAuthEnhancement() {
   bindEvents();
   unsubscribe = subscribeGoogleAuth(applyState);
 
+  // Only rediscover the React-owned Connect button if React actually replaces it.
+  // Do not rewrite its text from this observer: textContent changes are themselves
+  // child-list mutations and can otherwise create a self-triggering observer loop.
   const observer = new MutationObserver(() => {
     if (!connectButton?.isConnected) findConnectButton();
-    else if (state.status !== 'connected') restoreConnectButton();
     alignHost();
   });
   observer.observe(document.body, { childList: true, subtree: true });
