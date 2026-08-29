@@ -75,6 +75,15 @@ function emit(next: Partial<GoogleAuthState>) {
   window.dispatchEvent(new CustomEvent('family-os:google-auth-changed', { detail: getGoogleAuthState() }));
 }
 
+function reportAuthFailure(message: string) {
+  if (accessToken) {
+    // A denied incremental scope should not throw away a still-valid Calendar/account session.
+    emit({ status: 'connected', error: message });
+  } else {
+    emit({ status: 'error', error: message, expiresAt: null });
+  }
+}
+
 function clearExpiryTimer() {
   if (expiryTimer != null) window.clearTimeout(expiryTimer);
   expiryTimer = null;
@@ -112,7 +121,7 @@ async function loadProfile(token: string) {
 function captureTokenResponse(response: GoogleTokenResponse, requestedScope: string) {
   if (response.error || !response.access_token) {
     const message = response.error_description || response.error || 'Google authorization failed.';
-    emit({ status: 'error', error: message, expiresAt: null });
+    reportAuthFailure(message);
     return;
   }
 
@@ -188,7 +197,7 @@ export async function installGoogleAuthCapture() {
         originalCallback?.(response);
       },
       error_callback: (error: unknown) => {
-        emit({ status: 'error', error: 'Google authorization popup failed.', expiresAt: null });
+        reportAuthFailure('Google authorization popup failed.');
         originalErrorCallback?.(error);
       },
     });
