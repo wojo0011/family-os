@@ -75,6 +75,7 @@ function renderHost() {
         ${capability('Contacts / People', contactsGranted, 'contacts')}
         ${capability('Family Vault / Drive app data', driveGranted, 'drive')}
       </div>
+      ${state.error ? `<p class="google-account-error">${escapeHtml(state.error)}</p>` : ''}
       <footer><button type="button" data-google-disconnect>Disconnect Google</button></footer>
     </section>`;
   alignHost();
@@ -180,7 +181,8 @@ function bindEvents() {
     }
   });
 
-  // Ensure the existing App Calendar connection receives a token that is also captured by the auth service.
+  // Lazy-load GIS only when the user explicitly connects. Once loaded, the existing
+  // App Calendar flow receives the same token while this service captures lifecycle state.
   document.addEventListener('click', event => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
@@ -219,13 +221,6 @@ export function installGoogleAuthEnhancement() {
   findConnectButton();
   bindEvents();
   unsubscribe = subscribeGoogleAuth(applyState);
-
-  void installGoogleAuthCapture().then(() => {
-    captureReady = true;
-  }).catch(error => {
-    captureFailed = true;
-    console.warn('Family OS could not preload Google Identity Services.', error);
-  });
 
   const observer = new MutationObserver(() => {
     if (!connectButton?.isConnected) findConnectButton();
